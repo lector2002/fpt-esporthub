@@ -1,0 +1,259 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  WARNED
+  RESTRICTED
+  BANNED
+}
+
+enum GameId {
+  VALORANT
+  LEAGUE_OF_LEGENDS
+}
+
+enum MatchRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum MatchRequestType {
+  PLAYER_TO_PLAYER
+  PLAYER_TO_TEAM
+  TEAM_TO_PLAYER
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  SELF_REPORTED
+  PENDING
+  VERIFIED
+  API_FAILED
+  SUSPENDED
+}
+
+enum ReputationBadge {
+  NEW
+  VERIFIED
+  TRUSTED
+  CAUTION
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String?
+  displayName  String
+  role         UserRole   @default(USER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  profile              PlayerProfile?
+  teamMemberships      TeamMember[]
+  captainedTeams       Team[]                  @relation("TeamCaptain")
+  sentRequests         MatchRequest[]          @relation("RequestSender")
+  receivedRequests     MatchRequest[]          @relation("RequestReceiver")
+  conversationMembers  ConversationParticipant[]
+  messages             Message[]
+  reportsFiled         Report[]                @relation("Reporter")
+  reportsReceived      Report[]                @relation("ReportedUser")
+  blocksMade           Block[]                 @relation("Blocker")
+  blocksReceived       Block[]                 @relation("Blocked")
+  reputationRecords    ReputationRecord[]
+  eventInterests       TournamentEventInterest[]
+}
+
+model PlayerProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  game               GameId
+  rankTier           String
+  rankLevel          Int?
+  role               String
+  schedule           String[]
+  goals              String[]
+  communicationStyles String[]
+  riotId             String?
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  reputationBadge    ReputationBadge    @default(NEW)
+  bio                String?
+  lookingStatus      String             @default("open_to_match")
+  onboardingComplete Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Team {
+  id                  String   @id @default(cuid())
+  captainId           String
+  name                String
+  game                GameId
+  rankMin             String
+  rankMax             String
+  neededRoles         String[]
+  schedule            String[]
+  goals               String[]
+  communicationStyle  String
+  description         String?
+  recruitmentOpen     Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  captain User         @relation("TeamCaptain", fields: [captainId], references: [id])
+  members TeamMember[]
+  requests MatchRequest[]
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model MatchRequest {
+  id          String             @id @default(cuid())
+  senderId    String
+  receiverId  String?
+  teamId      String?
+  type        MatchRequestType
+  status      MatchRequestStatus @default(PENDING)
+  message     String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  sender       User          @relation("RequestSender", fields: [senderId], references: [id])
+  receiver     User?         @relation("RequestReceiver", fields: [receiverId], references: [id])
+  team         Team?         @relation(fields: [teamId], references: [id])
+  conversation Conversation?
+}
+
+model Conversation {
+  id             String   @id @default(cuid())
+  matchRequestId String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  matchRequest MatchRequest @relation(fields: [matchRequestId], references: [id], onDelete: Cascade)
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String    @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id])
+}
+
+model TournamentEvent {
+  id          String   @id @default(cuid())
+  title       String
+  game        GameId
+  organizer   String
+  startsAt    DateTime
+  deadlineAt  DateTime
+  rules       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  interests TournamentEventInterest[]
+}
+
+model TournamentEventInterest {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  event TournamentEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model Report {
+  id             String       @id @default(cuid())
+  reporterId     String
+  reportedUserId String?
+  targetType     String
+  targetId       String
+  reason         String
+  description    String?
+  status         ReportStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  resolvedAt     DateTime?
+
+  reporter     User  @relation("Reporter", fields: [reporterId], references: [id])
+  reportedUser User? @relation("ReportedUser", fields: [reportedUserId], references: [id])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+}
+
+model ReputationRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  points    Int
+  note      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

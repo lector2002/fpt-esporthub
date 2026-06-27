@@ -1,0 +1,30 @@
+{
+  "name": "fpt-esporthub",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @fpt-esporthub/web & npm run start:dev --workspace @fpt-esporthub/api",
+    "dev:web": "npm run dev --workspace @fpt-esporthub/web",
+    "dev:api": "npm run start:dev --workspace @fpt-esporthub/api",
+    "build": "npm run build --workspace @fpt-esporthub/shared && npm run build --workspace @fpt-esporthub/api && npm run build --workspace @fpt-esporthub/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:generate": "npm run prisma:generate --workspace @fpt-esporthub/database",
+    "db:migrate": "npm run prisma:migrate --workspace @fpt-esporthub/database",
+    "db:seed": "npm run prisma:seed --workspace @fpt-esporthub/database",
+    "smoke:api": "node scripts/smoke-api.mjs",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install chromium"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}
