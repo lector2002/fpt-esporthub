@@ -38,14 +38,14 @@ export default function ConversationDetailPage() {
     void sendMessage(params.id as string, text).catch(() => undefined);
   };
 
-  if (!conv) return <div className="page-shell"><h1>Conversation not found</h1></div>;
+  if (!conv) return <div className="chat-shell"><h1>Conversation not found</h1></div>;
 
   return (
-    <div className="page-shell">
+    <main className="chat-shell screen-grid-bg">
       <a href="/conversations" className="back-link">&larr; {t("messages")}</a>
-      <h1>{conv.otherUserName}</h1>
-
-      <div className="message-list">
+      <section className="chat-window-panel detail">
+        <div className="chat-window-head"><span>{conv.otherUserName[0]}</span><strong>{conv.otherUserName}</strong></div>
+      <div className="message-list chat-detail-messages">
         {messages.map((msg) => (
           <div key={msg.id} className={`message ${msg.senderId === "player-1" ? "sent" : "received"}`}>
             <div className="message-bubble">{msg.text}</div>
@@ -56,8 +56,9 @@ export default function ConversationDetailPage() {
 
       <form className="message-input" onSubmit={handleSend}>
         <input type="text" placeholder={t("typeMessage")} value={draft} onChange={(event) => setDraft(event.target.value)} />
-        <button type="submit" className="primary-action">{t("send")}</button>
+        <button type="submit" className="screen-btn-primary">{t("send")}</button>
       </form>
-    </div>
+      </section>
+    </main>
   );
 }

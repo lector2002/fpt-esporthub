@@ -2,38 +2,62 @@
 
 import { useEffect, useState } from "react";
 import { getConversations, getFallbackConversations } from "lib/api";
-import { useLanguage } from "lib/i18n";
 
 export default function ConversationsPage() {
-  const { t } = useLanguage();
   const [conversations, setConversations] = useState(getFallbackConversations());
+  const active = conversations[0] ?? null;
 
   useEffect(() => {
     void getConversations().then(setConversations);
   }, []);
 
   return (
-    <div className="page-shell">
-      <h1>{t("messages")}</h1>
-
-      {conversations.map((c) => (
-        <a key={c.id} href={`/conversations/${c.id}`} className="conversation-card">
-          <div className="conversation-left">
-            <span className="avatar-placeholder">{c.otherUserName[0]}</span>
-            <div className="conversation-info">
-              <strong>{c.otherUserName}</strong>
-              <span className="match-badge">{c.otherUserBadge}</span>
-              <p className="conversation-preview">{c.lastMessage}</p>
-            </div>
+    <main className="chat-shell screen-grid-bg">
+      <section className="screen-hero-card chat-hero">
+        <div className="screen-hero-bg" />
+        <div className="screen-grid-overlay" />
+        <div className="screen-hero-content">
+          <div>
+            <div className="screen-kicker-row"><span>SQUAD COMMS</span><i /><small>{conversations.length} conversations</small></div>
+            <h1>Chat & Giao tiếp</h1>
+            <p>Bàn chiến thuật và sắp xếp scrim với đồng đội.</p>
           </div>
-          <div className="conversation-right">
-            <span className="conversation-time">{new Date(c.lastMessageAt).toLocaleDateString()}</span>
-            {c.unread && <span className="unread-dot" />}
-          </div>
-        </a>
-      ))}
+        </div>
+      </section>
 
-      {conversations.length === 0 && <div className="empty-state"><p>{t("noConversations")}</p></div>}
-    </div>
+      <div className="chat-grid">
+        <aside className="chat-list-panel">
+          {conversations.map((conversation) => (
+            <a key={conversation.id} href={`/conversations/${conversation.id}`} className={`chat-list-item ${active?.id === conversation.id ? "active" : ""}`}>
+              <span>{conversation.otherUserName[0]}</span>
+              <div>
+                <strong>{conversation.otherUserName}</strong>
+                <small>{conversation.lastMessage}</small>
+              </div>
+              {conversation.unread && <i />}
+            </a>
+          ))}
+          {conversations.length === 0 && <p className="screen-empty-copy">Chưa có cuộc trò chuyện. Chấp nhận lời mời để bắt đầu chat.</p>}
+        </aside>
+
+        <section className="chat-window-panel">
+          {active ? (
+            <>
+              <div className="chat-window-head"><span>{active.otherUserName[0]}</span><strong>{active.otherUserName}</strong></div>
+              <div className="chat-preview-body">
+                <div className="chat-bubble received"><p>{active.lastMessage}</p></div>
+                <div className="chat-bubble sent"><p>Ok, 20h nhé. Mày host server nha.</p></div>
+              </div>
+              <div className="chat-input-row">
+                <input placeholder="Nhập tin nhắn..." disabled />
+                <a className="screen-btn-primary" href={`/conversations/${active.id}`}>Mở chat</a>
+              </div>
+            </>
+          ) : (
+            <div className="chat-empty">Chọn một cuộc trò chuyện để bắt đầu</div>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }

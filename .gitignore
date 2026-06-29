@@ -11,3 +11,6 @@ test-results/
 *.tsbuildinfo
 tmp/
 temp/
+
+.vercel
+.env*

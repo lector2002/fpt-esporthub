@@ -10,7 +10,7 @@
     "dev": "npm run dev --workspace @fpt-esporthub/web & npm run start:dev --workspace @fpt-esporthub/api",
     "dev:web": "npm run dev --workspace @fpt-esporthub/web",
     "dev:api": "npm run start:dev --workspace @fpt-esporthub/api",
-    "build": "npm run build --workspace @fpt-esporthub/shared && npm run build --workspace @fpt-esporthub/api && npm run build --workspace @fpt-esporthub/web",
+    "build": "npm run db:generate && npm run build --workspace @fpt-esporthub/shared && npm run build --workspace @fpt-esporthub/api && npm run build --workspace @fpt-esporthub/web",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "db:generate": "npm run prisma:generate --workspace @fpt-esporthub/database",

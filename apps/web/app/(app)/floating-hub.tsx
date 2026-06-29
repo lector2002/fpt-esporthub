@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   getConversation,
@@ -19,15 +19,19 @@ type HubView =
   | { type: "request"; requestId: string }
   | { type: "conversation"; conversationId: string };
 
+type HubTab = "requests" | "messages";
+
 export function FloatingHub() {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [requests, setRequests] = useState<MatchRequest[]>(getFallbackRequests());
   const [conversations, setConversations] = useState<Conversation[]>(getFallbackConversations());
   const [view, setView] = useState<HubView>({ type: "list" });
+  const [activeTab, setActiveTab] = useState<HubTab>("requests");
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const chatMessagesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void Promise.all([getRequests(), getConversations()]).then(([nextRequests, nextConversations]) => {
@@ -42,6 +46,13 @@ export function FloatingHub() {
   const latestConversations = conversations.slice(0, 3);
   const selectedRequest = view.type === "request" ? requests.find((request) => request.id === view.requestId) : null;
   const selectedConversation = view.type === "conversation" ? conversations.find((conversation) => conversation.id === view.conversationId) : null;
+
+  useEffect(() => {
+    const chatMessages = chatMessagesRef.current;
+    if (view.type !== "conversation" || !chatMessages) return;
+
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, [view, messages]);
 
   const openConversation = (conversationId: string) => {
     setView({ type: "conversation", conversationId });
@@ -86,7 +97,7 @@ export function FloatingHub() {
   return (
     <div className="floating-hub" aria-live="polite">
       {open && (
-        <div className="floating-panel">
+        <div className="floating-panel comms-panel-v2">
           <div className="floating-panel-header">
             <div>
               <span className="eyebrow">{t("squadComms")}</span>
@@ -100,39 +111,50 @@ export function FloatingHub() {
 
           {view.type === "list" && (
             <>
-              <section className="floating-section">
+              <div className="floating-tabs" role="tablist" aria-label={t("requestsMessages")}>
+                <button type="button" className={activeTab === "requests" ? "active" : ""} onClick={() => setActiveTab("requests")} role="tab" aria-selected={activeTab === "requests"}>
+                  {t("recruitmentRequests")}
+                  {pendingRequests.length > 0 && <span>{pendingRequests.length}</span>}
+                </button>
+                <button type="button" className={activeTab === "messages" ? "active" : ""} onClick={() => setActiveTab("messages")} role="tab" aria-selected={activeTab === "messages"}>
+                  {t("teamMessages")}
+                  {unreadConversations.length > 0 && <span>{unreadConversations.length}</span>}
+                </button>
+              </div>
+
+              {activeTab === "requests" && <section className="floating-section floating-tab-panel" role="tabpanel">
                 <div className="floating-section-title">
                   <strong>{t("recruitmentRequests")}</strong>
                   <a href="/requests">{t("viewAll")}</a>
                 </div>
                 {pendingRequests.slice(0, 3).map((request) => (
-                  <button key={request.id} type="button" className="floating-item" onClick={() => setView({ type: "request", requestId: request.id })}>
+                  <button key={request.id} type="button" className="floating-item needs-attention" onClick={() => setView({ type: "request", requestId: request.id })}>
                     <span className="floating-icon">!</span>
                     <span>
-                      <strong>{request.fromName}</strong>
+                      <strong>{request.fromName}<i aria-hidden="true" /></strong>
                       <small>{request.message}</small>
                     </span>
                   </button>
                 ))}
                 {pendingRequests.length === 0 && <p className="floating-empty">{t("noPendingRequests")}</p>}
-              </section>
+              </section>}
 
-              <section className="floating-section">
+              {activeTab === "messages" && <section className="floating-section floating-tab-panel" role="tabpanel">
                 <div className="floating-section-title">
                   <strong>{t("teamMessages")}</strong>
                   <a href="/conversations">{t("openInbox")}</a>
                 </div>
                 {latestConversations.map((conversation) => (
-                  <button key={conversation.id} type="button" className="floating-item" onClick={() => openConversation(conversation.id)}>
+                  <button key={conversation.id} type="button" className={`floating-item${conversation.unread ? " needs-attention" : ""}`} onClick={() => openConversation(conversation.id)}>
                     <span className="floating-icon">MSG</span>
                     <span>
-                      <strong>{conversation.otherUserName}</strong>
+                      <strong>{conversation.otherUserName}{conversation.unread && <i aria-hidden="true" />}</strong>
                       <small>{conversation.lastMessage}</small>
                     </span>
                   </button>
                 ))}
                 {latestConversations.length === 0 && <p className="floating-empty">{t("noMessages")}</p>}
-              </section>
+              </section>}
             </>
           )}
 
@@ -170,22 +192,22 @@ export function FloatingHub() {
                   <small>{selectedConversation.otherUserBadge} {t("squadChannel")}</small>
                 </div>
               </div>
-              <div className="floating-chat-messages">
+              <div className="floating-chat-messages" ref={chatMessagesRef}>
                 {(messages.length > 0 ? messages : [{ id: "last", conversationId: selectedConversation.id, senderId: "other", text: selectedConversation.lastMessage, createdAt: selectedConversation.lastMessageAt }]).map((message) => (
                   <div key={message.id} className={`floating-chat-bubble ${message.senderId === "player-1" ? "sent" : "received"}`}>{message.text}</div>
                 ))}
               </div>
               <form className="floating-chat-input" onSubmit={handleSendMessage}>
                 <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={t("sendQuickComms")} />
-                <button type="submit" className="primary-action">{t("send")}</button>
+                <button type="submit" className="primary-action chat-send-button" aria-label={t("send")}>➤</button>
               </form>
             </section>
           )}
         </div>
       )}
 
-      <button type="button" className="floating-trigger" onClick={() => setOpen((value) => !value)} aria-label={t("openComms")}>
-        <span className="trigger-icon">COMMS</span>
+      <button type="button" className="floating-trigger comms-trigger-v2" onClick={() => setOpen((value) => !value)} aria-label={t("openComms")}>
+        <span className="trigger-icon">{open ? "✕" : "💬"}</span>
         <span className="trigger-text">{t("squad")}</span>
         {notificationCount > 0 && <span className="floating-badge">{notificationCount}</span>}
       </button>

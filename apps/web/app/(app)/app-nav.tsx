@@ -1,22 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { logout } from "lib/api";
 import { useLanguage } from "lib/i18n";
 
 const navLinks = [
-  { href: "/dashboard", labelKey: "dashboard", short: "Home", icon: "📊" },
+  { href: "/dashboard", labelKey: "dashboard", short: "Home", icon: "🏠" },
   { href: "/find-match", labelKey: "findMatch", short: "Match", icon: "🔍" },
   { href: "/teams", labelKey: "teams", short: "Teams", icon: "👥" },
-  { href: "/events", labelKey: "events", short: "Events", icon: "🏆" },
-  { href: "/profile/me", labelKey: "profile", short: "Profile", icon: "👤" },
+  { href: "/requests", labelKey: "requests", short: "Reqs", icon: "📤" },
 ];
 
 export function AppNav() {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useLanguage();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     const handleSessionExpired = () => router.push("/login?expired=1");
@@ -32,7 +32,7 @@ export function AppNav() {
   return (
     <>
       <nav className="app-nav neon-app-nav">
-        <a href="/dashboard" className="nav-brand neon-brand"><span className="brand-mark">🎮</span> FPT EsportHub</a>
+        <a href="/dashboard" className="nav-brand neon-brand"><span className="brand-mark">F</span> FPT EsportHub</a>
         <div className="nav-links">
           {navLinks.map((link) => {
             const active = pathname === link.href || (link.href !== "/dashboard" && pathname.startsWith(link.href));
@@ -42,7 +42,22 @@ export function AppNav() {
               </a>
             );
           })}
-          <button type="button" className="nav-link neon-nav-link" onClick={handleLogout}>{t("logout")}</button>
+        </div>
+        <div className="app-nav-user-actions">
+          <a href="/conversations" className={`app-nav-icon-button ${pathname.startsWith("/conversations") ? "active" : ""}`} aria-label={t("messages")}>💬</a>
+          <div className="app-nav-profile-wrap">
+            <button type="button" className="app-nav-profile" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>
+              <span>🦊</span>
+              <strong>MinhZz</strong>
+              <small>▾</small>
+            </button>
+            {profileOpen && (
+              <div className="app-nav-profile-menu">
+                <a href="/profile/me" onClick={() => setProfileOpen(false)}>👤 Profile</a>
+                <button type="button" onClick={handleLogout}>↪ {t("logout")}</button>
+              </div>
+            )}
+          </div>
         </div>
       </nav>
       <nav className="mobile-tabbar">
