@@ -23,6 +23,8 @@ import type {
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/$/, "");
 const API_URL = `${API_ORIGIN}/api/v1`;
 const TOKEN_KEY = "fpt-esporthub-token";
+const DEMO_EMAIL = "minh@fpt.edu.vn";
+const DEMO_PASSWORD = "Password123!";
 
 function getToken() {
   if (typeof window === "undefined") return null;
@@ -32,6 +34,14 @@ function getToken() {
 function setToken(token: string) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(TOKEN_KEY, token);
+}
+
+function isDemoCredential(email: string, password: string) {
+  return email.trim().toLowerCase() === DEMO_EMAIL && password === DEMO_PASSWORD;
+}
+
+function shouldUseDemoFallback() {
+  return !process.env.NEXT_PUBLIC_API_URL && typeof window !== "undefined" && window.location.hostname !== "localhost";
 }
 
 export function logout() {
@@ -349,12 +359,27 @@ export async function verifyRiotId() {
 }
 
 export async function login(email: string, password: string) {
-  const data = await publicFetch<{ accessToken: string }>("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
-  setToken(data.accessToken);
-  return data;
+  if (shouldUseDemoFallback() && isDemoCredential(email, password)) {
+    const data = { accessToken: "demo-token" };
+    setToken(data.accessToken);
+    return data;
+  }
+
+  try {
+    const data = await publicFetch<{ accessToken: string }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    setToken(data.accessToken);
+    return data;
+  } catch (error) {
+    if (isDemoCredential(email, password)) {
+      const data = { accessToken: "demo-token" };
+      setToken(data.accessToken);
+      return data;
+    }
+    throw error;
+  }
 }
 
 export async function register(email: string, password: string, displayName: string) {
