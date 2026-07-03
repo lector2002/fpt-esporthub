@@ -1,123 +1,158 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getFallbackPlayers, getFallbackProfile, getFallbackRequests, getFallbackTeams, getMyProfile, getRequests, getTeams } from "lib/api";
-import type { MatchRequest, PlayerProfile, TeamProfile } from "lib/types";
+import { getDashboardView } from "lib/api";
+import type { DashboardCombatProfile, DashboardView } from "lib/types";
 
-function gameLabel(gameId: string) {
-  return gameId === "valorant" ? "Valorant" : "League of Legends";
+type GameKey = "lol" | "val";
+
+function gameLabel(game: GameKey) {
+  return game === "lol" ? "LoL" : "Valorant";
+}
+
+function gameIcon(game: GameKey) {
+  return game === "lol" ? "⚔️" : "🔫";
+}
+
+function pillClass(cls: DashboardCombatProfile["pills"][number]["cls"]) {
+  if (cls === "val") return "dash-pill-val";
+  if (cls === "goal") return "dash-pill-goal";
+  return "dash-pill-lol";
 }
 
 export default function DashboardPage() {
-  const [profile, setProfile] = useState<PlayerProfile>(getFallbackProfile());
-  const [players, setPlayers] = useState<PlayerProfile[]>(getFallbackPlayers().slice(0, 2));
-  const [teams, setTeams] = useState<TeamProfile[]>(getFallbackTeams().slice(0, 2));
-  const [requests, setRequests] = useState<MatchRequest[]>(getFallbackRequests());
+  const [dashboard, setDashboard] = useState<DashboardView | null>(null);
+  const [activeGame, setActiveGame] = useState<GameKey>("lol");
 
   useEffect(() => {
     async function loadDashboard() {
-      const [nextProfile, nextTeams, nextRequests] = await Promise.all([getMyProfile(), getTeams(), getRequests()]);
-      setProfile(nextProfile);
-      setTeams(nextTeams.slice(0, 2));
-      setRequests(nextRequests);
-      setPlayers(getFallbackPlayers().filter((player) => player.gameId === nextProfile.gameId).slice(0, 2));
+      const nextDashboard = await getDashboardView();
+      setDashboard(nextDashboard);
+      setActiveGame(nextDashboard.activeGame);
     }
     void loadDashboard();
   }, []);
 
-  const pending = requests.filter((request) => request.status === "pending");
-  const unreadMessages = 2;
-  const readiness = profile.riotId && profile.commStyleIds.length >= 2 ? 90 : 78;
-  const drillItems = [
-    ...players.map((player, index) => ({
-      id: player.id,
-      title: player.displayName,
-      desc: `${gameLabel(player.gameId)} · ${player.rankLabel} · ${player.roleLabel}`,
-      score: 88 - index * 7,
-      cta: "Gửi lời mời",
-      href: "/find-match",
-    })),
-    ...teams.map((team, index) => ({
-      id: team.id,
-      title: team.name,
-      desc: `${gameLabel(team.gameId)} · ${team.rankRange} · Cần ${team.neededRoles.join(", ") || "Flexible"}`,
-      score: 84 - index * 6,
-      cta: "Xem team",
-      href: `/teams/${team.id}`,
-    })),
-  ];
-  const tips = [
-    { label: "Đã verify Email FPT (+10% score)", state: "done" },
-    { label: profile.verificationStatus === "verified" ? "Đã verify Riot ID (+15% score)" : "Verify Riot ID để tăng trust", state: profile.verificationStatus === "verified" ? "done" : "pending" },
-    { label: profile.schedule.includes(",") ? "Lịch chơi đủ chi tiết" : "Cập nhật thêm khung giờ chơi", state: profile.schedule.includes(",") ? "done" : "todo" },
-  ];
+  if (!dashboard) {
+    return <main className="dashboard-shell"><section className="dashboard-card dashboard-loading">Đang tải dashboard...</section></main>;
+  }
+
+  const activeProfile = dashboard.profiles[activeGame];
+  const activeLabel = gameLabel(activeGame);
 
   return (
-    <main className="dash-shell screen-grid-bg">
-      <section className="screen-hero-card dash-hero">
-        <div className="screen-hero-bg" />
-        <div className="screen-grid-overlay" />
-        <div className="screen-hero-content">
-          <div>
-            <div className="screen-kicker-row"><span>COMMAND CENTER</span><i /><small>Daily battle brief</small></div>
-            <h1>Xin chào, {profile.displayName}</h1>
-            <p>Sẵn sàng tìm squad hôm nay? Đây là tóm tắt match, request và profile readiness của bạn.</p>
-            <div className="screen-pill-row">
-              <span className="screen-pill pill-comm">🔫 {gameLabel(profile.gameId)}</span>
-              <span className="screen-pill pill-goal">🏆 {profile.rankLabel}</span>
-              <span className="screen-pill pill-schedule">⚔️ {profile.roleLabel}</span>
-              <span className="screen-pill pill-status">🛡️ {profile.reputationBadge}</span>
+    <main className="dashboard-shell dashboard-grid-bg">
+      <div className="dashboard-switcher">
+        <button type="button" onClick={() => setActiveGame("lol")} className={`dashboard-toggle ${activeGame === "lol" ? "active lol" : ""}`}>⚔️ League of Legends</button>
+        <button type="button" onClick={() => setActiveGame("val")} className={`dashboard-toggle ${activeGame === "val" ? "active val" : ""}`}>🔫 Valorant</button>
+      </div>
+
+      <section className={`dashboard-hero dashboard-card ${activeGame === "lol" ? "lol" : "val"}`}>
+        <div className="dashboard-avatar-block">
+          <div className={`dashboard-avatar ${activeGame}`}>{dashboard.avatarEmoji}</div>
+          <div className="dashboard-status"><span />Đang tìm team</div>
+        </div>
+
+        <div className="dashboard-identity">
+          <span className={`dashboard-kicker ${activeGame}`}>DAILY {activeLabel} BRIEF</span>
+          <div className="dashboard-title-row">
+            <h1>{dashboard.displayName}</h1>
+            <div className="dashboard-badges">
+              <span className={activeGame === "lol" ? "lol" : "val"}>✅ {activeLabel} Verified</span>
+              <span>🛡️ Trusted</span>
             </div>
           </div>
-          <div className="screen-hero-actions">
-            <a href="/find-match" className="screen-btn-primary">🔍 Tìm đồng đội</a>
-            <a href="/profile/me" className="screen-btn-outline">✏️ Cập nhật hồ sơ</a>
+          <p>"{activeProfile.bio}"</p>
+
+          <div className="dashboard-mini-stats">
+            <MiniStat label="Rank" value={activeProfile.rank} tone={activeGame} />
+            <MiniStat label="Main Role" value={activeProfile.role} />
+            <MiniStat label="Match Score" value={`${activeProfile.matchScore}%`} gradient />
+            <MiniStat label="Pending Reqs" value={`${activeProfile.pendingReqs} New`} tone="orange" />
           </div>
+        </div>
+
+        <div className="dashboard-hero-actions">
+          <a href="/find-match" className="dashboard-btn-neon">⚡ Tìm Match Ngay</a>
+          <a href="/profile/me" className="dashboard-btn-outline">✏️ Chỉnh sửa Profile</a>
         </div>
       </section>
 
-      <section className="screen-stat-grid">
-        <ScreenStat icon="🎯" label="Live leads" value={drillItems.length} tone="cyan" />
-        <ScreenStat icon="📨" label="Pending requests" value={pending.length} tone="orange" />
-        <ScreenStat icon="💬" label="Unread messages" value={unreadMessages} tone="blue" />
-        <ScreenStat icon="⚡" label="Profile ready" value={`${readiness}%`} tone="purple" />
-      </section>
+      <div className="dashboard-combat-grid">
+        <section className="dashboard-card dashboard-radar-card">
+          <h2>Combat Profile</h2>
+          <p>Chỉ số {activeLabel}</p>
+          <RadarChart profile={activeProfile} game={activeGame} />
+        </section>
 
-      <div className="screen-main-grid">
-        <section className="screen-main-col">
-          <div className="screen-section-head"><h2>Daily Match Drills & Actions</h2></div>
-          {drillItems.map((item) => (
-            <article key={item.id} className="dash-action-card">
-              <div>
-                <h3>{item.title}</h3>
-                <p>{item.desc}</p>
+        <div className="dashboard-stack">
+          <section className="dashboard-card dashboard-panel">
+            <h2>⚡ Playstyle & Traits</h2>
+            <div className="dashboard-traits">
+              <Trait icon={gameIcon(activeGame)} label="Main Role" value={activeProfile.role} tone={activeGame} />
+              <Trait icon="🎙️" label="Comms" value={activeProfile.commStyle} />
+              <Trait icon="🔥" label="Style" value={activeProfile.playStyle} />
+              <Trait icon="🎯" label="Goal" value={activeProfile.goal} />
+            </div>
+            <div className="dashboard-pill-row">
+              {activeProfile.pills.map((pill) => <span key={pill.text} className={`dashboard-pill ${pillClass(pill.cls)}`}>{pill.text}</span>)}
+            </div>
+          </section>
+
+          <section className="dashboard-card dashboard-panel">
+            <div className="dashboard-panel-head"><h2>📊 Recent Combat Log</h2><span>Last 3 matches</span></div>
+            <div className="dashboard-match-log">
+              {activeProfile.matches.map((match) => (
+                <article key={match.id} className="dashboard-log-item">
+                  <span className={match.result === "Win" ? "win" : "loss"} />
+                  <strong>{gameIcon(activeGame)}</strong>
+                  <div><h3>{match.map} · {match.score}</h3><p>{activeLabel} · {match.type} · {match.time}</p></div>
+                  <aside><b className={match.result === "Win" ? "win" : "loss"}>{match.result}</b><small>{match.sub}</small></aside>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div className="dashboard-bottom-grid">
+        <section className="dashboard-daily">
+          <h2>Daily Match Drills</h2>
+          {activeProfile.dailyMatches.map((match) => (
+            <article key={match.id} className="dashboard-daily-card">
+              <div className="dashboard-daily-player">
+                <div className={activeGame}>{match.avatar}</div>
+                <span><h3>{match.name}</h3><p>{activeLabel} · {match.desc}</p></span>
               </div>
-              <strong>{item.score}%</strong>
-              <a href={item.href} className="screen-btn-primary">{item.cta}</a>
+              <div className="dashboard-score"><strong>{match.score}%</strong><small>match score</small></div>
+              <a href="/find-match" className="dashboard-btn-neon">Gửi lời mời</a>
             </article>
           ))}
         </section>
 
-        <aside className="screen-side-col">
-          <section className="screen-panel">
-            <h3>⚡ Tối ưu Profile</h3>
-            <div className="screen-tip-list">
-              {tips.map((tip) => <div key={tip.label} className={`screen-tip ${tip.state}`}>{tip.state === "done" ? "✅" : tip.state === "pending" ? "⏳" : "⚪"}<span>{tip.label}</span></div>)}
+        <aside className="dashboard-stack">
+          <section className="dashboard-card dashboard-panel">
+            <h3>🔗 Game Connections</h3>
+            <GameConnection game="lol" activeGame={activeGame} />
+            <GameConnection game="val" activeGame={activeGame} />
+          </section>
+
+          <section className="dashboard-card dashboard-panel">
+            <div className="dashboard-readiness-head"><h3>🎯 Profile Readiness</h3><strong>{activeProfile.readiness}%</strong></div>
+            <div className="dashboard-progress"><span className={activeGame} style={{ width: `${activeProfile.readiness}%` }} /></div>
+            <div className="dashboard-check-list">
+              <div>✅ <span>Verify Email FPT</span></div>
+              <div>✅ <span>Connect {activeLabel} Account</span></div>
             </div>
           </section>
 
-          <section className="screen-panel">
-            <div className="screen-panel-head"><h3>⏳ Pending Comms</h3><span>{pending.length}</span></div>
-            <div className="screen-mini-list">
-              {pending.slice(0, 3).map((request) => (
-                <a key={request.id} href="/requests" className="screen-mini-item">
-                  <span>⚡</span>
-                  <div><strong>{request.fromUserId === profile.userId ? request.toName : request.fromName}</strong><small>{request.message}</small></div>
-                  <em>{new Date(request.createdAt).toLocaleDateString("vi-VN")}</em>
-                </a>
-              ))}
-              {pending.length === 0 && <p className="screen-empty-copy">Không có request đang chờ.</p>}
-            </div>
+          <section className="dashboard-card dashboard-panel">
+            <div className="dashboard-panel-head"><h3>⏳ Pending Comms</h3><span>{activeProfile.pendingReqs || dashboard.unreadMessages}</span></div>
+            <a href="/conversations" className="dashboard-comm-item">
+              <span>{activeProfile.pendingComms.avatar}</span>
+              <div><strong>{activeProfile.pendingComms.name}</strong><small>{activeProfile.pendingComms.msg}</small></div>
+              <em>5m</em>
+            </a>
           </section>
         </aside>
       </div>
@@ -125,6 +160,35 @@ export default function DashboardPage() {
   );
 }
 
-function ScreenStat({ icon, label, value, tone }: { icon: string; label: string; value: string | number; tone: string }) {
-  return <div className="screen-stat-card"><div className={tone}>{icon}</div><span><small>{label}</small><strong>{value}</strong></span></div>;
+function MiniStat({ label, value, tone, gradient }: { label: string; value: string; tone?: string; gradient?: boolean }) {
+  return <div className="dashboard-mini-stat"><small>{label}</small><strong className={gradient ? "text-gradient" : tone}>{value}</strong></div>;
+}
+
+function Trait({ icon, label, value, tone }: { icon: string; label: string; value: string; tone?: GameKey }) {
+  return <div className={`dashboard-trait ${tone ?? ""}`}><span>{icon}</span><div><small>{label}</small><strong>{value}</strong></div></div>;
+}
+
+function RadarChart({ profile, game }: { profile: DashboardCombatProfile; game: GameKey }) {
+  return (
+    <svg viewBox="0 0 200 200" className="dashboard-radar">
+      <polygon points="100,20 169.28,60 169.28,140 100,180 30.72,140 30.72,60" className="radar-grid" />
+      <polygon points="100,40 152,70 152,130 100,160 48,130 48,70" className="radar-grid" />
+      <polygon points="100,60 134.64,80 134.64,120 100,140 65.36,120 65.36,80" className="radar-grid" />
+      <polygon points="100,80 117.32,90 117.32,110 100,120 82.68,110 82.68,90" className="radar-grid" />
+      {["100,100 100,20", "100,100 169.28,60", "100,100 169.28,140", "100,100 100,180", "100,100 30.72,140", "100,100 30.72,60"].map((points) => {
+        const [from, to] = points.split(" ");
+        const [x1, y1] = from.split(",");
+        const [x2, y2] = to.split(",");
+        return <line key={points} x1={x1} y1={y1} x2={x2} y2={y2} className="radar-axis" />;
+      })}
+      <polygon points={profile.radar.points} className={`radar-area ${game}`} />
+      {profile.radar.coords.map((point) => <circle key={`${point.cx}-${point.cy}`} cx={point.cx} cy={point.cy} r="3" className={`radar-point ${game}`} />)}
+      {profile.radar.labels.map((label) => <text key={label.text} x={label.x} y={label.y} textAnchor="middle" className="radar-label">{label.text}</text>)}
+    </svg>
+  );
+}
+
+function GameConnection({ game, activeGame }: { game: GameKey; activeGame: GameKey }) {
+  const active = game === activeGame;
+  return <div className={`dashboard-connection ${game} ${active ? "active" : ""}`}><span>{gameIcon(game)}</span><strong>{game === "lol" ? "League of Legends" : "Valorant"}</strong><small>Verified</small></div>;
 }

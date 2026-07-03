@@ -177,3 +177,53 @@ export interface ProfileView {
   }>;
   teams: ProfileTeamAffiliation[];
 }
+
+export interface DashboardCombatProfile {
+  bio: string;
+  rank: string;
+  role: string;
+  commStyle: string;
+  playStyle: string;
+  goal: string;
+  matchScore: number;
+  pendingReqs: number;
+  readiness: number;
+  pills: Array<{ text: string; cls: "lol" | "val" | "goal" }>;
+  radar: {
+    points: string;
+    coords: Array<{ cx: number; cy: number }>;
+    labels: Array<{ x: number; y: number; text: string }>;
+  };
+  matches: Array<{
+    id: string | number;
+    map: string;
+    score: string;
+    type: string;
+    time: string;
+    result: "Win" | "Loss";
+    sub: string;
+  }>;
+  dailyMatches: Array<{
+    id: string | number;
+    avatar: string;
+    name: string;
+    desc: string;
+    score: number;
+  }>;
+  pendingComms: {
+    avatar: string;
+    name: string;
+    msg: string;
+  };
+}
+
+export interface DashboardView {
+  displayName: string;
+  avatarEmoji: string;
+  activeGame: "lol" | "val";
+  unreadMessages: number;
+  profiles: {
+    lol: DashboardCombatProfile;
+    val: DashboardCombatProfile;
+  };
+}

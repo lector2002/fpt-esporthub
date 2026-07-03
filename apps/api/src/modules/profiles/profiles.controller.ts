@@ -27,6 +27,12 @@ export class ProfilesController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get("dashboard")
+  getDashboard(@Request() req: { user: { id: string } }) {
+    return this.profilesService.getDashboard(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get("me")
   getMyProfile(@Request() req: { user: { id: string } }) {
     return this.profilesService.getMyProfile(req.user.id);

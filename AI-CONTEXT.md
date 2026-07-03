@@ -1,6 +1,6 @@
 # AI Context
 
-> Updated: 2026-06-27
+> Updated: 2026-07-03
 > Level: Large
 > Status: active
 
@@ -10,7 +10,7 @@ One-liner: FPT EsportHub is a large phased product/codebase project for EXE101, 
 
 ## Current State
 
-Phase 1 is mostly handoff-ready for local stakeholder demo, with one active UI-polish thread in progress. Backend uses NestJS modules with shared `PrismaService` and global throttling; frontend has an esports/arena-styled Next.js UI connected through `apps/web/lib/api.ts`; Docker PostgreSQL is running locally via `fpt-esporthub-postgres`; Prisma migration/seed have been applied; login/register/onboarding store/use `fpt-esporthub-token`; app nav supports logout/token cleanup; Requests/Messages are available through a global floating `Squad Comms` bubble with inline request handling and mini chat; browser e2e covers seeded-user and new-user core flows. Current active work: Vietnamese interface switch was started and GLM per-screen UI retry is ongoing.
+Phase 1 is mostly handoff-ready for local stakeholder demo, with active UI-polish still in progress. Backend uses NestJS modules with shared `PrismaService` and global throttling; frontend has an esports/arena-styled Next.js UI connected through `apps/web/lib/api.ts`; Docker PostgreSQL is running locally via `fpt-esporthub-postgres`; Prisma migration/seed have been applied; login/register/onboarding store/use `fpt-esporthub-token`; app nav supports logout/token cleanup; Requests/Messages are available through a global floating `Squad Comms` bubble with inline request handling and mini chat; browser e2e covers seeded-user and new-user core flows. Latest work: dashboard was redesigned to match a dark neon FPT EsportHub combat dashboard with LoL/Valorant switching, and backend now exposes a dashboard view-model endpoint at `GET /api/v1/profiles/dashboard`.
 
 ## Done
 
@@ -71,19 +71,24 @@ Phase 1 is mostly handoff-ready for local stakeholder demo, with one active UI-p
 - [x] Applied Vietnamese labels to major app UI areas: nav, dashboard, profile, find match, teams, events, requests, conversations, and `Squad Comms` bubble.
 - [x] GLM screen-by-screen UI work started. GLM successfully rewrote landing `apps/web/app/page.tsx`; CSS was manually completed afterward because GLM timed out before styling/typecheck.
 - [x] Web typecheck passed after initial i18n fixes: `npm run typecheck --workspace @fpt-esporthub/web`.
+- [x] Rebuilt dashboard UI at `apps/web/app/(app)/dashboard/page.tsx` to match the provided neon dashboard reference: game switcher, hero identity, Combat Profile radar chart, Playstyle & Traits, Recent Combat Log, Daily Match Drills, Game Connections, Profile Readiness, and Pending Comms.
+- [x] Added dashboard styling in `apps/web/app/styles.css` with responsive desktop/mobile behavior and LoL/Valorant color themes.
+- [x] Added shared dashboard contract types in `apps/web/lib/types.ts` and frontend API helper/fallback `getDashboardView()` in `apps/web/lib/api.ts`.
+- [x] Added backend dashboard endpoint `GET /api/v1/profiles/dashboard` via `apps/api/src/modules/profiles/profiles.controller.ts` and `profiles.service.ts`; it combines real user profile/request/message data with demo combat/radar/match-log defaults until Riot/game stats tables exist.
+- [x] Re-verified latest dashboard work: `npm run typecheck` and `npm run build` passed.
 
 ## Now
 
-- Local app is currently running for user review at `http://localhost:3000`; API health at `http://localhost:4000/api/v1/health`.
-- Phase 1 core product is ready, but UI polishing is still active because user requested GLM to revise each screen one-by-one.
-- Active caveat: after starting i18n + GLM landing edits, full `npm run build`/`npm run e2e` should be rerun before final handoff because only web typecheck has been confirmed after those latest edits.
+- Local app may be run for user review at `http://localhost:3000`; API health is expected at `http://localhost:4000/api/v1/health` when `npm run dev:api` is running.
+- Phase 1 core product is ready, but UI polishing is still active. Dashboard now matches the provided neon FPT EsportHub reference and is wired through a backend view-model endpoint.
+- Active caveat: latest dashboard changes passed `npm run typecheck` and `npm run build`; `npm run e2e` and `npm run smoke:api` were not rerun after this specific dashboard/backend change.
 - Known remaining product hardening: refresh token rotation, production deployment config, Riot API integration, WebSocket chat in Phase 2.
 
 ## Next
 
-1. Continue GLM per-screen UI retry as requested by user.
-2. Finish Vietnamese interface coverage and verify switch behavior from `/profile/me`.
-3. Run final verification after UI/i18n work: `npm run typecheck`, `npm run build`, `npm run e2e`, `npm run smoke:api`.
+1. Review the new dashboard in browser on desktop and mobile widths.
+2. Run final post-polish verification when local API/DB are running: `npm run e2e` and `npm run smoke:api`.
+3. Continue remaining per-screen UI polish if user wants other screens to match the same neon dashboard direction.
 4. User/stakeholder run-through of local demo.
 5. Capture Phase 1 review feedback and decide deployment vs Phase 2 planning.
 
@@ -105,8 +110,12 @@ Phase 1 is mostly handoff-ready for local stakeholder demo, with one active UI-p
 - `docs/architecture/System-Architecture.md` - module map, data flow, permissions.
 - `package.json` - npm workspace scripts.
 - `apps/web/` - Next.js frontend scaffold.
+- `apps/web/app/(app)/dashboard/page.tsx` - latest neon LoL/Valorant dashboard screen.
 - `apps/web/lib/api.ts` - frontend API/fallback boundary for Phase 1 pages.
+- `apps/web/lib/types.ts` - shared frontend view-model types including `DashboardView`.
 - `apps/api/` - NestJS backend scaffold.
+- `apps/api/src/modules/profiles/profiles.controller.ts` - profile routes including `GET /profiles/dashboard`.
+- `apps/api/src/modules/profiles/profiles.service.ts` - profile logic and dashboard view-model builder.
 - `packages/database/` - Prisma schema and seed scaffold.
 - `packages/shared/` - shared enums/types scaffold.
 - `.swarm/convoy.json` - active swarm registry.
@@ -159,6 +168,7 @@ Phase 1 is mostly handoff-ready for local stakeholder demo, with one active UI-p
 - 2026-06-27: User requested Vietnamese interface version and switch in profile. Implemented initial `lib/i18n.ts`, profile language switch, and translated main app UI labels. Needs final full build/e2e after all screen polish.
 - 2026-06-27: User requested GLM for per-screen UI/UX edits. Multiple large GLM jobs timed out; user chose to keep retrying GLM. Smaller GLM task successfully edited landing `page.tsx`; manual CSS completion was added because GLM timed out before CSS/typecheck.
 - 2026-06-26: Frontend/UI implementation tasks should be routed to `9router/vps/glm-5.2`; backend/spec/research tasks keep existing routing unless changed.
+- 2026-07-03: User provided a full HTML/Tailwind/Alpine reference for the dashboard and asked to adjust frontend plus backend accordingly. Implemented directly in existing Next.js/NestJS stack rather than adding Alpine/Tailwind CDN.
 
 ## Project Timeline
 
@@ -192,6 +202,7 @@ Phase 1 is mostly handoff-ready for local stakeholder demo, with one active UI-p
 - Refactored services to shared NestJS `PrismaService`.
 - Added global API throttling with `@nestjs/throttler` at 100 requests/minute.
 - Added session-expiry behavior from frontend on protected API `401`.
+- Added `GET /api/v1/profiles/dashboard` to provide the dashboard-specific LoL/Valorant view model. It uses real profile/request/message counts where available and demo combat stats/radar/match logs as defaults until game stat persistence exists.
 
 ### Database/Seed
 
@@ -211,6 +222,7 @@ Phase 1 is mostly handoff-ready for local stakeholder demo, with one active UI-p
 - Bubble shows pending/unread notification badge.
 - Bubble supports inline request detail/actions and inline mini chat without redirect.
 - Preserved deep links `/requests`, `/conversations`, `/conversations/[id]`.
+- Rebuilt `/dashboard` into the provided dark neon FPT EsportHub dashboard layout with LoL/Valorant toggle, combat radar, playstyle traits, recent combat log, daily match drills, game connections, readiness, and pending comms.
 
 ### Verification/QA
 
@@ -218,7 +230,7 @@ Phase 1 is mostly handoff-ready for local stakeholder demo, with one active UI-p
 - Added Playwright config and e2e tests in `e2e/phase1.spec.ts`.
 - E2E covers seeded user login/navigation/bubble-to-requests/profile/logout and new user register/onboarding/dashboard.
 - Before latest i18n/GLM edits, full verification passed: `npm run db:generate`, `npm run typecheck`, `npm run build`, `npm run smoke:api`, `npm run e2e`.
-- After starting i18n/GLM landing edits, `npm run typecheck --workspace @fpt-esporthub/web` passed; full verification still needs rerun after all UI polish.
+- After latest dashboard/backend edits, `npm run typecheck` and `npm run build` passed. `npm run e2e` and `npm run smoke:api` still need rerun before final handoff if a full verification gate is required.
 
 ### Current UI/GLM Thread
 
@@ -230,7 +242,8 @@ Phase 1 is mostly handoff-ready for local stakeholder demo, with one active UI-p
   - `.swarm/agents/glm-screen-01-landing-only/task.md` edited `apps/web/app/page.tsx` but timed out before CSS/typecheck.
   - Manual CSS completion added for new landing classes and web typecheck passed.
   - `.swarm/agents/glm-screen-02-auth-only/task.md` and `.swarm/agents/glm-screen-02a-login-only/task.md` timed out without observed edits.
-  - User chose `Cứ retry GLM`; continue retrying GLM with one-screen/one-file prompts.
+- User chose `Cứ retry GLM`; continue retrying GLM with one-screen/one-file prompts.
+- Separate from GLM retry, the dashboard was manually updated on 2026-07-03 from the user's provided HTML reference and backend was adjusted to support it.
 
 ## Avoid
 
@@ -244,7 +257,7 @@ Phase 1 is mostly handoff-ready for local stakeholder demo, with one active UI-p
 
 ## Last Session
 
-- Done: Planning/specs, monorepo, backend modules, frontend core flow, Docker DB/migration/seed, auth/onboarding, API boundary, floating comms bubble, API smoke, browser e2e, handoff docs, review notes file, local servers.
-- In progress: Vietnamese interface switch and GLM per-screen UI polish.
-- Pending: Continue GLM retry screen-by-screen, rerun full verification after UI/i18n completion, user review, deployment decision, Phase 2 planning.
+- Done: Planning/specs, monorepo, backend modules, frontend core flow, Docker DB/migration/seed, auth/onboarding, API boundary, floating comms bubble, API smoke, browser e2e, handoff docs, review notes file, local servers, and new neon dashboard with backend dashboard view-model endpoint.
+- In progress: UI polish thread; dashboard is updated, other screens can still be polished if requested.
+- Pending: Browser review of new dashboard, rerun `npm run e2e` and `npm run smoke:api` if final verification is needed, user review, deployment decision, Phase 2 planning.
 - Blocker: None.
