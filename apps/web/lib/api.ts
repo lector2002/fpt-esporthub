@@ -7,6 +7,8 @@ import {
   mockPlayers,
   mockRequests,
   mockTeams,
+  mockCoaches,
+  mockCoachDetails,
 } from "./mock-data";
 import type {
   Conversation,
@@ -631,39 +633,47 @@ function mapCoachingRequest(request: any): CoachingRequest {
 }
 
 export async function getCoaches() {
-  const data = await apiFetch<{ coaches: any[] }>("/coaching/coaches");
-  return data.coaches.map(mapCoach);
+  try {
+    const data = await apiFetch<{ coaches: any[] }>("/coaching/coaches");
+    return data.coaches.map(mapCoach);
+  } catch {
+    return mockCoaches;
+  }
 }
 
 export async function getCoachDetail(id: string): Promise<CoachDetail> {
-  const data = await apiFetch<{ coach: any }>(`/coaching/coaches/${id}`);
-  const coach = data.coach;
-  const profile = coach.user?.profile;
-  const feedbacks = (coach.feedbacks ?? []).map((fb: any) => ({
-    id: fb.id,
-    playerName: fb.player?.displayName ?? "Player",
-    rating: fb.rating,
-    comment: fb.comment,
-    createdAt: fb.createdAt,
-  }));
-  const avgRating = feedbacks.length ? feedbacks.reduce((s: number, f: any) => s + f.rating, 0) / feedbacks.length : 0;
-  return {
-    id: coach.id,
-    userId: coach.userId ?? coach.user?.id,
-    displayName: coach.user?.displayName ?? "Coach",
-    game: coach.game === "VALORANT" ? "Valorant" : "League of Legends",
-    specialties: coach.specialties ?? [],
-    hourlyRate: coach.hourlyRate,
-    bio: coach.bio,
-    availability: coach.availability ?? [],
-    rank: rankLabel(profile?.rankTier, profile?.rankLevel),
-    reputationBadge: profile?.reputationBadge ? profile.reputationBadge[0] + profile.reputationBadge.slice(1).toLowerCase() : "New",
-    riotId: profile?.riotId ?? null,
-    verificationStatus: profile?.verificationStatus === "VERIFIED" ? "Verified" : "Self-reported",
-    totalSessions: coach.requests?.length ?? 0,
-    avgRating: Math.round(avgRating * 10) / 10,
-    feedbacks,
-  };
+  try {
+    const data = await apiFetch<{ coach: any }>(`/coaching/coaches/${id}`);
+    const coach = data.coach;
+    const profile = coach.user?.profile;
+    const feedbacks = (coach.feedbacks ?? []).map((fb: any) => ({
+      id: fb.id,
+      playerName: fb.player?.displayName ?? "Player",
+      rating: fb.rating,
+      comment: fb.comment,
+      createdAt: fb.createdAt,
+    }));
+    const avgRating = feedbacks.length ? feedbacks.reduce((s: number, f: any) => s + f.rating, 0) / feedbacks.length : 0;
+    return {
+      id: coach.id,
+      userId: coach.userId ?? coach.user?.id,
+      displayName: coach.user?.displayName ?? "Coach",
+      game: coach.game === "VALORANT" ? "Valorant" : "League of Legends",
+      specialties: coach.specialties ?? [],
+      hourlyRate: coach.hourlyRate,
+      bio: coach.bio,
+      availability: coach.availability ?? [],
+      rank: rankLabel(profile?.rankTier, profile?.rankLevel),
+      reputationBadge: profile?.reputationBadge ? profile.reputationBadge[0] + profile.reputationBadge.slice(1).toLowerCase() : "New",
+      riotId: profile?.riotId ?? null,
+      verificationStatus: profile?.verificationStatus === "VERIFIED" ? "Verified" : "Self-reported",
+      totalSessions: coach.requests?.length ?? 0,
+      avgRating: Math.round(avgRating * 10) / 10,
+      feedbacks,
+    };
+  } catch {
+    return mockCoachDetails[id] ?? mockCoaches[0] as CoachDetail;
+  }
 }
 
 export async function submitCoachFeedback(coachId: string, input: { rating: number; comment: string }) {
@@ -675,8 +685,12 @@ export async function createCoachProfile(input: { game: string; specialties: str
 }
 
 export async function getCoachingRequests() {
-  const data = await apiFetch<{ requests: any[] }>("/coaching/requests");
-  return data.requests.map(mapCoachingRequest);
+  try {
+    const data = await apiFetch<{ requests: any[] }>("/coaching/requests");
+    return data.requests.map(mapCoachingRequest);
+  } catch {
+    return [];
+  }
 }
 
 export async function createCoachingRequest(input: { coachId: string; proposedStartAt: string; durationMinutes: number; proposedPrice: number; message: string }) {

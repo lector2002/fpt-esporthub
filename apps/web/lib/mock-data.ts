@@ -1,4 +1,4 @@
-import type { PlayerProfile, TeamProfile, MatchResult, MatchRequest, Conversation, Message, TournamentEvent } from "./types";
+import type { PlayerProfile, TeamProfile, MatchResult, MatchRequest, Conversation, Message, TournamentEvent, Coach, CoachDetail } from "./types";
 
 export const currentUser: PlayerProfile = {
   id: "player-1",
@@ -69,3 +69,24 @@ export const mockEvents: TournamentEvent[] = [
   { id: "evt-2", title: "LOL University Cup", game: "League of Legends", date: "2026-09-01", organizer: "VUG Esports", rules: "5v5, Bo1 vòng bảng, Bo3 playoffs", deadline: "2026-08-20", interestedCount: 18, description: "Giải LOL cho các trường đại học." },
   { id: "evt-3", title: "Night Scrim Series #1", game: "Valorant", date: "2026-07-10", organizer: "Phoenix Rising", rules: "Scrim Bo3, không chính thức", deadline: "2026-07-08", interestedCount: 6, description: "Scrim tập luyện giữa các team." },
 ];
+
+export const mockCoaches: Coach[] = [
+  { id: "coach-1", userId: "u5", displayName: "KhoaSentinel", game: "Valorant", specialties: ["Sentinel setup", "VOD review", "Shotcalling"], hourlyRate: 180000, bio: "Coach Valorant cho người chơi muốn cải thiện game sense, setup site và giao tiếp trong đội.", availability: ["Tối T3", "Tối T5", "Cuối tuần"], rank: "Diamond 1", reputationBadge: "Trusted" },
+  { id: "coach-2", userId: "u2", displayName: "AnhTuSupport", game: "League of Legends", specialties: ["Support macro", "Vision control", "Rank climbing"], hourlyRate: 150000, bio: "Coach LoL tập trung vào macro, kiểm soát tầm nhìn và cách phối hợp bot lane hiệu quả.", availability: ["Tối T2", "Tối T6", "Chiều Chủ nhật"], rank: "Platinum 3", reputationBadge: "Trusted" },
+  { id: "coach-3", userId: "u4", displayName: "LinhMid", game: "League of Legends", specialties: ["Mid lane mechanics", "Map awareness", "Wave management"], hourlyRate: 120000, bio: "Mid main muốn chia sẻ kinh nghiệm cho người chơi mới bắt đầu leo rank LoL.", availability: ["Cuối tuần"], rank: "Gold 1", reputationBadge: "New" },
+  { id: "coach-4", userId: "u3", displayName: "HieuSniper", game: "Valorant", specialties: ["Aim training", "Entry fragging", "Crosshair placement"], hourlyRate: 100000, bio: "Coach aim và mechanics cho Duelist, phù hợp người chơi muốn cải thiện kỹ năng cá nhân.", availability: ["Tối T2", "Tối T4", "Tối T6"], rank: "Silver 3", reputationBadge: "New" },
+];
+
+export const mockCoachDetails: Record<string, CoachDetail> = {
+  "coach-1": { ...mockCoaches[0], riotId: "Khoa#1011", verificationStatus: "Verified", totalSessions: 5, avgRating: 4.5, feedbacks: [
+    { id: "fb-1", playerName: "MinhNguyen", rating: 5, comment: "Coach rất tận tâm, giải thích rõ ràng cách setup site và call team. Mình leo từ Gold lên Platinum sau 2 tuần.", createdAt: "2026-07-01T10:00:00Z" },
+    { id: "fb-2", playerName: "HieuSniper", rating: 4, comment: "VOD review chi tiết, chỉ ra nhiều lỗi mình không nhận ra. Recommend cho ai muốn cải thiện game sense.", createdAt: "2026-07-05T14:30:00Z" },
+  ] },
+  "coach-2": { ...mockCoaches[1], riotId: "AnhTu#NA1", verificationStatus: "Verified", totalSessions: 3, avgRating: 5.0, feedbacks: [
+    { id: "fb-3", playerName: "LinhMid", rating: 5, comment: "Anh coach rất kiên nhẫn, dạy macro và ward control cực kỳ dễ hiểu. Mình rank Gold sau 1 tháng học.", createdAt: "2026-07-03T09:00:00Z" },
+  ] },
+  "coach-3": { ...mockCoaches[2], riotId: null, verificationStatus: "Self-reported", totalSessions: 1, avgRating: 4.0, feedbacks: [
+    { id: "fb-4", playerName: "MinhNguyen", rating: 4, comment: "Giới thiệu cơ bản về mid lane ok, nhưng cần thêm kinh nghiệm thực战.", createdAt: "2026-07-06T16:00:00Z" },
+  ] },
+  "coach-4": { ...mockCoaches[3], riotId: "HieuSniper#VN1", verificationStatus: "Self-reported", totalSessions: 0, avgRating: 0, feedbacks: [] },
+};
