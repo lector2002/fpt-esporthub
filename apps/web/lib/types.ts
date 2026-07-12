@@ -227,3 +227,56 @@ export interface DashboardView {
     val: DashboardCombatProfile;
   };
 }
+
+export interface Coach {
+  id: string;
+  userId: string;
+  displayName: string;
+  game: string;
+  specialties: string[];
+  hourlyRate: number;
+  bio: string;
+  availability: string[];
+  rank: string;
+  reputationBadge: string;
+}
+
+export interface CoachFeedback {
+  id: string;
+  playerName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface CoachDetail {
+  id: string;
+  userId: string;
+  displayName: string;
+  game: string;
+  specialties: string[];
+  hourlyRate: number;
+  bio: string;
+  availability: string[];
+  rank: string;
+  reputationBadge: string;
+  riotId: string | null;
+  verificationStatus: string;
+  totalSessions: number;
+  avgRating: number;
+  feedbacks: CoachFeedback[];
+}
+
+export interface CoachingRequest {
+  id: string;
+  coachId: string;
+  coachName: string;
+  playerName: string;
+  proposedStartAt: string;
+  durationMinutes: number;
+  proposedPrice: number;
+  message: string;
+  status: "pending" | "countered" | "agreed" | "declined" | "cancelled";
+  lastProposedById: string;
+  isCoach: boolean;
+}

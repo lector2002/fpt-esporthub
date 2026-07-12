@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from "@nestjs/common";
+import { Injectable, ForbiddenException } from "@nestjs/common";
 import { GameId } from "@fpt-esporthub/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { gameRanks } from "../lookups/lookup-data";

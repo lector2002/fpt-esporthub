@@ -118,6 +118,67 @@ async function main() {
     },
   });
 
+  await prisma.coachProfile.upsert({
+    where: { userId: khoa.id },
+    update: {
+      game: "VALORANT",
+      specialties: ["Sentinel setup", "VOD review", "Shotcalling"],
+      hourlyRate: 180000,
+      bio: "Coach Valorant cho người chơi muốn cải thiện game sense, setup site và giao tiếp trong đội.",
+      availability: ["Tối T3", "Tối T5", "Cuối tuần"],
+      active: true,
+    },
+    create: {
+      userId: khoa.id,
+      game: "VALORANT",
+      specialties: ["Sentinel setup", "VOD review", "Shotcalling"],
+      hourlyRate: 180000,
+      bio: "Coach Valorant cho người chơi muốn cải thiện game sense, setup site và giao tiếp trong đội.",
+      availability: ["Tối T3", "Tối T5", "Cuối tuần"],
+    },
+  });
+
+  await prisma.coachProfile.upsert({
+    where: { userId: anhtu.id },
+    update: {
+      game: "LEAGUE_OF_LEGENDS",
+      specialties: ["Support macro", "Vision control", "Rank climbing"],
+      hourlyRate: 150000,
+      bio: "Coach LoL tập trung vào macro, kiểm soát tầm nhìn và cách phối hợp bot lane hiệu quả.",
+      availability: ["Tối T2", "Tối T6", "Chiều Chủ nhật"],
+      active: true,
+    },
+    create: {
+      userId: anhtu.id,
+      game: "LEAGUE_OF_LEGENDS",
+      specialties: ["Support macro", "Vision control", "Rank climbing"],
+      hourlyRate: 150000,
+      bio: "Coach LoL tập trung vào macro, kiểm soát tầm nhìn và cách phối hợp bot lane hiệu quả.",
+      availability: ["Tối T2", "Tối T6", "Chiều Chủ nhật"],
+    },
+  });
+
+  const coachKhoa = await prisma.coachProfile.findFirst({ where: { userId: khoa.id } });
+  if (coachKhoa) {
+    for (const fb of [
+      { playerId: minh.id, rating: 5, comment: "Coach rất tận tâm, giải thích rõ ràng cách setup site và call team. Mình leo từ Gold lên Platinum sau 2 tuần." },
+      { playerId: hieu.id, rating: 4, comment: "VOD review chi tiết, chỉ ra nhiều lỗi mình không nhận ra. Recommend cho ai muốn cải thiện game sense." },
+    ]) {
+      const existing = await prisma.coachFeedback.findFirst({ where: { coachId: coachKhoa.id, playerId: fb.playerId } });
+      if (!existing) await prisma.coachFeedback.create({ data: { coachId: coachKhoa.id, ...fb } });
+    }
+  }
+
+  const coachAnhtu = await prisma.coachProfile.findFirst({ where: { userId: anhtu.id } });
+  if (coachAnhtu) {
+    for (const fb of [
+      { playerId: linh.id, rating: 5, comment: "Anh coach rất kiên nhẫn, dạy macro và ward control cực kỳ dễ hiểu. Mình rank Gold sau 1 tháng học." },
+    ]) {
+      const existing = await prisma.coachFeedback.findFirst({ where: { coachId: coachAnhtu.id, playerId: fb.playerId } });
+      if (!existing) await prisma.coachFeedback.create({ data: { coachId: coachAnhtu.id, ...fb } });
+    }
+  }
+
   const phoenix = await prisma.team.upsert({
     where: { id: "seed-team-phoenix" },
     update: {},

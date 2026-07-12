@@ -9,6 +9,7 @@ const navLinks = [
   { href: "/dashboard", labelKey: "dashboard", short: "Home", icon: "🏠" },
   { href: "/find-match", labelKey: "findMatch", short: "Match", icon: "🔍" },
   { href: "/teams", labelKey: "teams", short: "Teams", icon: "👥" },
+  { href: "/coaches", labelKey: "coaches", short: "Coach", icon: "🎓" },
   { href: "/requests", labelKey: "requests", short: "Reqs", icon: "📤" },
 ];
 

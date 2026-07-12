@@ -15,6 +15,7 @@ import { ReportsModule } from "./reports/reports.module";
 import { BlocksModule } from "./blocks/blocks.module";
 import { ReputationModule } from "./reputation/reputation.module";
 import { AdminModule } from "./admin/admin.module";
+import { CoachingModule } from "./coaching/coaching.module";
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AdminModule } from "./admin/admin.module";
     BlocksModule,
     ReputationModule,
     AdminModule,
+    CoachingModule,
   ],
   providers: [
     {

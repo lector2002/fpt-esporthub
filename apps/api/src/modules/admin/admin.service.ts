@@ -92,7 +92,7 @@ export class AdminService {
     return { reports, total, page, limit };
   }
 
-  async updateReport(reportId: string, status: string, resolution?: string) {
+  async updateReport(reportId: string, status: string, _resolution?: string) {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
     });

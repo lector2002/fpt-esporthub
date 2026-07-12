@@ -60,6 +60,14 @@ enum ReportStatus {
   DISMISSED
 }
 
+enum CoachingRequestStatus {
+  PENDING
+  COUNTERED
+  AGREED
+  DECLINED
+  CANCELLED
+}
+
 model User {
   id           String     @id @default(cuid())
   email        String     @unique
@@ -84,6 +92,64 @@ model User {
   reputationRecords    ReputationRecord[]
   eventInterests       TournamentEventInterest[]
   passwordResetTokens  PasswordResetToken[]
+  coachProfile         CoachProfile?
+  coachingRequestsSent CoachingRequest[] @relation("CoachingPlayer")
+  coachingRequestsReceived CoachingRequest[] @relation("CoachingCoach")
+  coachFeedbacks       CoachFeedback[]   @relation("CoachFeedbackPlayer")
+}
+
+model CoachProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  game         GameId
+  specialties  String[]
+  hourlyRate   Int
+  bio          String
+  availability String[]
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requests CoachingRequest[]
+  feedbacks CoachFeedback[]
+
+  @@index([game, active])
+}
+
+model CoachFeedback {
+  id        String   @id @default(cuid())
+  coachId   String
+  playerId  String
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+
+  coach  CoachProfile @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  player User         @relation("CoachFeedbackPlayer", fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([coachId])
+}
+
+model CoachingRequest {
+  id                String               @id @default(cuid())
+  coachId           String
+  playerId          String
+  proposedStartAt   DateTime
+  durationMinutes   Int
+  proposedPrice     Int
+  message           String
+  status            CoachingRequestStatus @default(PENDING)
+  lastProposedById  String
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  coach    CoachProfile @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  player   User         @relation("CoachingPlayer", fields: [playerId], references: [id], onDelete: Cascade)
+  proposer User         @relation("CoachingCoach", fields: [lastProposedById], references: [id])
+
+  @@index([coachId, status])
+  @@index([playerId, status])
 }
 
 model PasswordResetToken {

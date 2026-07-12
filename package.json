@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace @fpt-esporthub/web & npm run start:dev --workspace @fpt-esporthub/api",
+    "dev": "node scripts/dev.mjs",
     "dev:web": "npm run dev --workspace @fpt-esporthub/web",
     "dev:api": "npm run start:dev --workspace @fpt-esporthub/api",
     "build": "npm run db:generate && npm run build --workspace @fpt-esporthub/shared && npm run build --workspace @fpt-esporthub/api && npm run build --workspace @fpt-esporthub/web",
@@ -25,6 +25,10 @@
     "npm": ">=10.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1"
+    "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.61.1",
+    "eslint": "^9.39.4",
+    "globals": "^16.5.0",
+    "typescript-eslint": "^8.62.1"
   }
 }

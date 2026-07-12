@@ -12,13 +12,15 @@ import type {
   Conversation,
   MatchRequest,
   MatchResult,
-  Message,
   PlayerProfile,
   TeamProfile,
   TournamentEvent,
   ProfileView,
   FindMatchView,
   DashboardView,
+  Coach,
+  CoachDetail,
+  CoachingRequest,
 } from "./types";
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/$/, "");
@@ -593,6 +595,96 @@ export async function createMatchRequest(input: {
       message: input.message,
     }),
   });
+}
+
+function mapCoach(coach: any): Coach {
+  const profile = coach.user?.profile;
+  return {
+    id: coach.id,
+    userId: coach.userId ?? coach.user?.id,
+    displayName: coach.user?.displayName ?? "Coach",
+    game: coach.game === "VALORANT" ? "Valorant" : "League of Legends",
+    specialties: coach.specialties ?? [],
+    hourlyRate: coach.hourlyRate,
+    bio: coach.bio,
+    availability: coach.availability ?? [],
+    rank: rankLabel(profile?.rankTier, profile?.rankLevel),
+    reputationBadge: profile?.reputationBadge ? profile.reputationBadge[0] + profile.reputationBadge.slice(1).toLowerCase() : "New",
+  };
+}
+
+function mapCoachingRequest(request: any): CoachingRequest {
+  const coach = request.coach ?? {};
+  return {
+    id: request.id,
+    coachId: request.coachId,
+    coachName: coach.user?.displayName ?? request.coachName ?? "Coach",
+    playerName: request.player?.displayName ?? "Player",
+    proposedStartAt: request.proposedStartAt,
+    durationMinutes: request.durationMinutes,
+    proposedPrice: request.proposedPrice,
+    message: request.message,
+    status: request.status.toLowerCase(),
+    lastProposedById: request.lastProposedById,
+    isCoach: Boolean(coach.user?.id && coach.user.id === request.lastProposedById) || false,
+  } as CoachingRequest;
+}
+
+export async function getCoaches() {
+  const data = await apiFetch<{ coaches: any[] }>("/coaching/coaches");
+  return data.coaches.map(mapCoach);
+}
+
+export async function getCoachDetail(id: string): Promise<CoachDetail> {
+  const data = await apiFetch<{ coach: any }>(`/coaching/coaches/${id}`);
+  const coach = data.coach;
+  const profile = coach.user?.profile;
+  const feedbacks = (coach.feedbacks ?? []).map((fb: any) => ({
+    id: fb.id,
+    playerName: fb.player?.displayName ?? "Player",
+    rating: fb.rating,
+    comment: fb.comment,
+    createdAt: fb.createdAt,
+  }));
+  const avgRating = feedbacks.length ? feedbacks.reduce((s: number, f: any) => s + f.rating, 0) / feedbacks.length : 0;
+  return {
+    id: coach.id,
+    userId: coach.userId ?? coach.user?.id,
+    displayName: coach.user?.displayName ?? "Coach",
+    game: coach.game === "VALORANT" ? "Valorant" : "League of Legends",
+    specialties: coach.specialties ?? [],
+    hourlyRate: coach.hourlyRate,
+    bio: coach.bio,
+    availability: coach.availability ?? [],
+    rank: rankLabel(profile?.rankTier, profile?.rankLevel),
+    reputationBadge: profile?.reputationBadge ? profile.reputationBadge[0] + profile.reputationBadge.slice(1).toLowerCase() : "New",
+    riotId: profile?.riotId ?? null,
+    verificationStatus: profile?.verificationStatus === "VERIFIED" ? "Verified" : "Self-reported",
+    totalSessions: coach.requests?.length ?? 0,
+    avgRating: Math.round(avgRating * 10) / 10,
+    feedbacks,
+  };
+}
+
+export async function submitCoachFeedback(coachId: string, input: { rating: number; comment: string }) {
+  return apiFetch(`/coaching/coaches/${coachId}/feedback`, { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function createCoachProfile(input: { game: string; specialties: string[]; hourlyRate: number; bio: string; availability: string[] }) {
+  return apiFetch("/coaching/coaches/me", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function getCoachingRequests() {
+  const data = await apiFetch<{ requests: any[] }>("/coaching/requests");
+  return data.requests.map(mapCoachingRequest);
+}
+
+export async function createCoachingRequest(input: { coachId: string; proposedStartAt: string; durationMinutes: number; proposedPrice: number; message: string }) {
+  return apiFetch("/coaching/requests", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function updateCoachingRequest(id: string, action: "counter" | "agree" | "cancel", input?: { proposedStartAt: string; durationMinutes: number; proposedPrice: number; message: string }) {
+  return apiFetch(`/coaching/requests/${id}/${action}`, { method: "PUT", body: input ? JSON.stringify(input) : undefined });
 }
 
 export async function getConversations() {

@@ -11,6 +11,7 @@ const translations = {
     dashboard: "Dashboard",
     findMatch: "Find Match",
     teams: "Teams",
+    coaches: "Coaches",
     events: "Events",
     profile: "Profile",
     logout: "Logout",
@@ -86,6 +87,7 @@ const translations = {
     dashboard: "Bảng điều khiển",
     findMatch: "Tìm đồng đội",
     teams: "Đội hình",
+    coaches: "Coach",
     events: "Giải đấu",
     profile: "Hồ sơ",
     logout: "Đăng xuất",
@@ -173,9 +175,11 @@ export function setLanguagePreference(language: Language) {
 }
 
 export function useLanguage() {
-  const [language, setLanguage] = useState<Language>(readLanguage);
+  const [language, setLanguage] = useState<Language>("vi");
 
   useEffect(() => {
+    setLanguage(readLanguage());
+
     const handleChange = (event: Event) => {
       setLanguage((event as CustomEvent<Language>).detail ?? readLanguage());
     };
