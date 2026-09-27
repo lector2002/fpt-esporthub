@@ -13,7 +13,6 @@ apps/api/uploads/
 tmp/
 temp/
 
-.vercel
 .env*
 
 # Local scratch: screenshots, logs, throwaway env files for the local prod stack.

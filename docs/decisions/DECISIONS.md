@@ -132,6 +132,8 @@ Impact:
 
 ### D12 - Deployment Direction
 
+Superseded by D14 (2026-09-27): self-hosted on the homelab; Vercel removed.
+
 Decision: Use Vercel for frontend, Railway/Render/Fly.io for backend, and Supabase Postgres or Neon for database.
 
 Reason: This gives fast student-project deployment while keeping architecture realistic for closed beta.
@@ -152,3 +154,14 @@ Impact:
 - Frontend implementation agents should use `9router/vps/glm-5.2`.
 - Backend, architecture, research, and planning agents keep the previous model routing unless the user changes it.
 - Handoff docs and convoy routing should mark frontend tasks separately.
+
+### D14 - Self-Hosted Deployment
+
+Decision: Run web, API, Postgres and Caddy on the homelab with Docker Compose, exposed through a Cloudflare Tunnel at https://fptesporthub.io.vn. Vercel is removed from the project.
+
+Reason: One box hosts the whole stack, including the WebSocket gateway, with no ports opened on the host. The Vercel demo only ever served the frontend, and its builds had stopped passing.
+
+Impact:
+
+- Releases go through `bash deploy/deploy.sh homelab-an` (runbook in `deploy/README.md`).
+- No `vercel.json`; pushes to GitHub don't deploy anything.

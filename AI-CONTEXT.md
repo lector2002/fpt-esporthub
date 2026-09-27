@@ -165,6 +165,7 @@ Rework (2026-09-26) is integrated: 9 feature workers done, orchestrator integrat
 
 ## Decisions
 
+- 2026-09-27: Vercel removed (vercel.json, .vercel link, docs). Hosting is the homelab only (docs/decisions/DECISIONS.md D14). homelab-launch merged into main (fast-forward). The Vercel project and its GitHub app still need removing in the dashboards.
 - 2026-09-27: Voice audio prefers RED (Opus redundancy) over plain Opus: live calls buzzed from packet loss; RED fixed it (user confirmed). Costs ~16 kbps more per peer, fine for small mesh rooms. Keep the per-peer quality readout for future voice reports.
 - 2026-06-26: Project level set to Large because the user clarified this is a large codebase project with many phases and features.
 - 2026-06-26: MVP narrowed to Team Finding to avoid overbuilding the all-in-one ecosystem before validating demand.

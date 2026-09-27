@@ -10,7 +10,7 @@ Backend: NestJS
 Database: PostgreSQL
 ORM: Prisma
 Realtime: NestJS WebSocket Gateway, added progressively
-Deploy: Vercel frontend + Railway/Render/Fly.io backend + Supabase/Neon Postgres
+Deploy: self-hosted homelab (Docker Compose: web, api, Postgres, Caddy) behind a Cloudflare Tunnel
 ```
 
 ## 2. Why This Stack
@@ -29,14 +29,14 @@ This makes a separate backend worth the cost.
 
 | Layer | Choice | Reason |
 | --- | --- | --- |
-| Frontend | Next.js | Strong React ecosystem, fast UI build, Vercel deploy, good SSR/SPA flexibility |
+| Frontend | Next.js | Strong React ecosystem, fast UI build, good SSR/SPA flexibility |
 | Backend | NestJS | Modular architecture, good for large codebase, clean service/controller structure, WebSocket support |
 | Database | PostgreSQL | Relational data fits users, teams, requests, tournaments, messages, reports |
 | ORM | Prisma | Type-safe schema, migrations, developer speed |
 | Auth | NestJS JWT or Auth.js integration | Need backend-controlled permissions for matching, chat, admin, moderation |
 | Realtime | NestJS WebSocket Gateway | Future full chat system needs backend-controlled realtime behavior |
-| Hosting | Vercel + Railway/Render/Fly.io | Easy split deploy for frontend/backend |
-| DB Hosting | Supabase Postgres or Neon | Managed Postgres for beta |
+| Hosting | Homelab, Docker Compose | One box runs web, API and proxy; Cloudflare Tunnel exposes it without opening ports |
+| DB Hosting | Postgres 16 container on the homelab | Same box as the API, managed through Prisma migrations |
 | Cache/Queue | Redis later | Add in Phase 2+ for chat presence, notifications, queues, rate limiting |
 
 ## 4. Why Not Supabase-only
@@ -176,9 +176,9 @@ Next.js + NestJS + PostgreSQL + Prisma + WebSocket-ready backend
 Approved deployment direction:
 
 ```text
-Frontend: Vercel
-Backend: Railway/Render/Fly.io
-Database: Supabase Postgres or Neon
+Homelab: web, api, Postgres and Caddy in Docker Compose
+Public access: Cloudflare Tunnel to https://fptesporthub.io.vn
+Release: bash deploy/deploy.sh homelab-an (see deploy/README.md)
 ```
 
 ## 10. AI Agent Model Routing
