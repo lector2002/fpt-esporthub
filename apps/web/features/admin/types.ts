@@ -1,3 +1,4 @@
+import type { CreditTxKind } from "@/features/credits/types";
 import type { GameEnum, GameSlug, ReputationBadge, VerificationStatus } from "@/lib/contracts";
 
 export type UserStatus = "ACTIVE" | "WARNED" | "RESTRICTED" | "BANNED";
@@ -30,6 +31,23 @@ export interface AdminFinance {
   daily: { day: string; vnd: number; orders: number; creditsUsed: number }[];
   topBuyers: { user: FinanceUser; vnd: number; orders: number }[];
   recentTopUps: { orderCode: number; credits: number; amountVnd: number; status: TopUpStatus; provider: string; createdAt: string; paidAt: string | null; user: FinanceUser }[];
+}
+
+export interface AdminUserDetail {
+  user: AdminUser & {
+    creditBalance: number;
+    premiumUntil: string | null;
+    teams: { id: string; name: string; game: GameSlug; logoKey: string | null; role: string }[];
+  };
+  money: {
+    creditVnd: number;
+    paidVnd: number;
+    paidOrders: number;
+    creditsSpent: number;
+    historyLimit: number;
+    transactions: { id: string; amount: number; balanceAfter: number; kind: CreditTxKind; note: string | null; createdAt: string }[];
+    topUps: { orderCode: number; credits: number; amountVnd: number; status: TopUpStatus; provider: string; createdAt: string; paidAt: string | null }[];
+  };
 }
 
 export interface Paged<T> {

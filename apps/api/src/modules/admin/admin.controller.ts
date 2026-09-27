@@ -46,6 +46,12 @@ export class AdminController {
     return this.adminService.getUsers(query.q, query.status, toPage(query.page));
   }
 
+  @Get("users/:id")
+  async getUser(@Param("id") id: string) {
+    const user = await this.adminService.getUser(id);
+    return { user, money: await this.adminFinanceService.getUserMoney(id) };
+  }
+
   @Put("users/:id/status")
   updateUserStatus(
     @Request() req: AuthedRequest,

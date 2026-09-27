@@ -8,6 +8,7 @@ import type {
   AdminReport,
   AdminTeam,
   AdminUser,
+  AdminUserDetail,
   FinancePeriod,
   Paged,
   ReportAction,
@@ -42,6 +43,13 @@ export function useAdminFinance(days: FinancePeriod) {
     queryFn: () => api<AdminFinance>(`/admin/finance?days=${days}`),
     placeholderData: keepPreviousData,
     refetchInterval: 60_000,
+  });
+}
+
+export function useAdminUser(id: string) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "users", "detail", id],
+    queryFn: () => api<AdminUserDetail>(`/admin/users/${encodeURIComponent(id)}`),
   });
 }
 

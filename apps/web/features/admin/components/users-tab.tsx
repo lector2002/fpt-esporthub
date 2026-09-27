@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Users } from "lucide-react";
+import { ABOVE_CARD_LINK, CardLink } from "@/components/common/card-link";
 import { ReputationBadge, GameBadge, VerificationBadge } from "@/components/common/badges";
 import { QueryState } from "@/components/common/query-state";
 import { UserAvatar } from "@/components/common/user-avatar";
@@ -97,20 +99,22 @@ function UsersTable({ users }: { users: AdminUser[] }) {
   );
 }
 
+/** The whole row opens the user's detail page; the status select sits above that link. */
 function UserRow({ user }: { user: AdminUser }) {
   const { t } = useAdminMessages();
-  const session = useSession();
-  const [pendingStatus, setPendingStatus] = useState<UserStatus | null>(null);
-  const locked = user.role === "ADMIN" || user.id === session.user?.id;
+  const href = `/admin/users/${user.id}`;
 
   return (
-    <TableRow>
+    <TableRow className="relative cursor-pointer has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring">
       <TableCell>
+        <CardLink href={href} />
         <div className="flex items-center gap-2">
           <UserAvatar name={user.displayName} imageKey={user.avatarKey} className="size-8" />
           <div className="min-w-0">
             <p className="flex items-center gap-1.5 font-medium">
-              {user.displayName}
+              <Link href={href} aria-label={t("openUser", { name: user.displayName })} className="focus-visible:outline-none">
+                {user.displayName}
+              </Link>
               {user.role === "ADMIN" && <Badge variant="secondary">{t("adminRole")}</Badge>}
             </p>
             <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -142,20 +146,34 @@ function UserRow({ user }: { user: AdminUser }) {
         {t("reportsSummary", { received: user.reportsReceived, open: user.openReportsReceived })}
       </TableCell>
       <TableCell>
-        <Select value={user.status} disabled={locked} onValueChange={(value) => setPendingStatus(value as UserStatus)}>
-          <SelectTrigger size="sm" className={cn("w-32", USER_STATUS_TONE[user.status])} aria-label={t("colStatus")}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {USER_STATUSES.map((value) => (
-              <SelectItem key={value} value={value}>
-                {t(`status_${value}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <UserStatusDialog user={user} nextStatus={pendingStatus} onClose={() => setPendingStatus(null)} />
+        <UserStatusSelect user={user} className={ABOVE_CARD_LINK} />
       </TableCell>
     </TableRow>
+  );
+}
+
+/** Status picker with its confirm dialog. Locked for admins and for yourself. */
+export function UserStatusSelect({ user, className }: { user: AdminUser; className?: string }) {
+  const { t } = useAdminMessages();
+  const session = useSession();
+  const [pendingStatus, setPendingStatus] = useState<UserStatus | null>(null);
+  const locked = user.role === "ADMIN" || user.id === session.user?.id;
+
+  return (
+    <div className={className}>
+      <Select value={user.status} disabled={locked} onValueChange={(value) => setPendingStatus(value as UserStatus)}>
+        <SelectTrigger size="sm" className={cn("w-32", USER_STATUS_TONE[user.status])} aria-label={t("colStatus")}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {USER_STATUSES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {t(`status_${value}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <UserStatusDialog user={user} nextStatus={pendingStatus} onClose={() => setPendingStatus(null)} />
+    </div>
   );
 }

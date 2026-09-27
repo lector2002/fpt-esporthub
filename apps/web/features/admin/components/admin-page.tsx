@@ -11,6 +11,7 @@ import { FinancePage } from "./finance-page";
 import { OverviewTab } from "./overview-tab";
 import { ReportsTab } from "./reports-tab";
 import { TeamsTab } from "./teams-tab";
+import { UserDetail } from "./user-detail";
 import { UsersTab } from "./users-tab";
 import { VenuesTab } from "./venues-tab";
 import { CoachesTab } from "./coaches-tab";
@@ -27,8 +28,8 @@ const SECTIONS = {
   coaches: CoachesTab,
 } satisfies Record<AdminSectionKey, () => React.ReactNode>;
 
-/** One page of the admin console. `null` is the console home: the finance dashboard. */
-export function AdminPage({ section }: { section: AdminSectionKey | null }) {
+/** One page of the admin console. `null` is the console home: the finance dashboard. `userId` opens one user. */
+export function AdminPage({ section, userId }: { section: AdminSectionKey | null; userId?: string }) {
   const { t } = useAdminMessages();
   const { status, user } = useSession();
 
@@ -37,6 +38,7 @@ export function AdminPage({ section }: { section: AdminSectionKey | null }) {
     return <EmptyState icon={ShieldX} title={t("noAccess")} description={t("noAccessDescription")} />;
   }
   if (section === null) return <FinancePage />;
+  if (userId) return <UserDetail id={userId} />;
 
   const Content = SECTIONS[section];
   const item = ADMIN_SECTIONS.find((candidate) => candidate.section === section)!;

@@ -79,4 +79,16 @@ test("an admin grants credits from the credit ledger", async ({ page }) => {
   const row = page.getByRole("row").filter({ hasText: player.displayName });
   await expect(row).toContainText("Adjustment");
   await expect(row).toContainText("+15");
+
+  // Clicking anywhere on the user's row opens their detail page with the same history.
+  await page.getByRole("navigation", { name: "Admin console" }).getByRole("link", { name: "Users" }).click();
+  await page.getByPlaceholder("Search name or email").fill(player.email);
+  await page.keyboard.press("Enter");
+  await page.getByRole("row").filter({ hasText: player.email }).click();
+  await expect(page).toHaveURL(new RegExp(`/admin/users/${player.id}$`));
+  await expect(page.getByRole("heading", { level: 1, name: player.displayName })).toBeVisible();
+  await expect(page.getByText("15 credits").first()).toBeVisible();
+  const history = page.getByRole("row").filter({ hasText: "e2e grant" });
+  await expect(history).toContainText("Adjustment");
+  await expect(history).toContainText("+15");
 });

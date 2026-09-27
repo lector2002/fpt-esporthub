@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import type { Prisma } from "@fpt-esporthub/database";
 import { toGameSlug } from "../../common/game";
 import { PrismaService } from "../prisma/prisma.service";
 import { ReputationService } from "../reputation/reputation.service";
@@ -76,7 +77,35 @@ export class AdminService {
       }),
       this.prisma.user.count({ where }),
     ]);
+    return { items: await this.withStats(users), total, page, pageSize: PAGE_SIZE };
+  }
 
+  /** One user for the admin detail page: the list row plus account details, teams and money. */
+  async getUser(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        ...USER_SELECT,
+        creditBalance: true,
+        premiumUntil: true,
+        teamMemberships: {
+          select: { role: true, team: { select: { id: true, name: true, game: true, logoKey: true } } },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException("User not found");
+    const { teamMemberships, creditBalance, premiumUntil, ...row } = user;
+    const [shaped] = await this.withStats([row]);
+    return {
+      ...shaped,
+      creditBalance,
+      premiumUntil,
+      teams: teamMemberships.map(({ role, team }) => ({ ...team, game: toGameSlug(team.game), role })),
+    };
+  }
+
+  private async withStats(users: Prisma.UserGetPayload<{ select: typeof USER_SELECT }>[]) {
     const [points, openReports] = await Promise.all([
       this.prisma.reputationRecord.groupBy({
         by: ["userId"],
@@ -92,7 +121,7 @@ export class AdminService {
     const pointsByUser = new Map(points.map((row) => [row.userId, row._sum.points ?? 0]));
     const openByUser = new Map(openReports.map((row) => [row.reportedUserId, row._count._all]));
 
-    const items = users.map(({ _count, profiles, ...user }) => ({
+    return users.map(({ _count, profiles, ...user }) => ({
       ...user,
       profiles: profiles.map((profile) => ({ ...profile, game: toGameSlug(profile.game) })),
       reputationPoints: pointsByUser.get(user.id) ?? 0,
@@ -100,7 +129,6 @@ export class AdminService {
       openReportsReceived: openByUser.get(user.id) ?? 0,
       reportsFiled: _count.reportsFiled,
     }));
-    return { items, total, page, pageSize: PAGE_SIZE };
   }
 
   async updateUserStatus(actorId: string, userId: string, status: UserStatusValue, note?: string) {

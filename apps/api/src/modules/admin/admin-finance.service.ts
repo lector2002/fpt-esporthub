@@ -22,10 +22,42 @@ function vnDayStart(daysAgo: number) {
 }
 
 const sum = (value: number | null | undefined) => value ?? 0;
+const USER_HISTORY_LIMIT = 50;
 
 @Injectable()
 export class AdminFinanceService {
   constructor(private prisma: PrismaService) {}
+
+  /** A user's money: totals, the newest ledger entries and top-up orders. */
+  async getUserMoney(userId: string) {
+    const [paid, spent, refunded, transactions, topUps] = await Promise.all([
+      this.prisma.creditTopUp.aggregate({ where: { userId, status: "PAID" }, _sum: { amountVnd: true }, _count: true }),
+      this.prisma.creditTransaction.aggregate({ where: { userId, amount: { lt: 0 }, kind: { not: "ADJUSTMENT" } }, _sum: { amount: true } }),
+      this.prisma.creditTransaction.aggregate({ where: { userId, kind: "COACHING_REFUND" }, _sum: { amount: true } }),
+      this.prisma.creditTransaction.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: USER_HISTORY_LIMIT,
+        select: { id: true, amount: true, balanceAfter: true, kind: true, note: true, createdAt: true },
+      }),
+      this.prisma.creditTopUp.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: USER_HISTORY_LIMIT,
+        select: { orderCode: true, credits: true, amountVnd: true, status: true, provider: true, createdAt: true, paidAt: true },
+      }),
+    ]);
+    return {
+      creditVnd: CREDIT_VND,
+      paidVnd: sum(paid._sum.amountVnd),
+      paidOrders: paid._count,
+      // A coaching refund returns a hold, so it is not spending.
+      creditsSpent: -sum(spent._sum.amount) - sum(refunded._sum.amount),
+      historyLimit: USER_HISTORY_LIMIT,
+      transactions,
+      topUps,
+    };
+  }
 
   async getFinance(days: FinancePeriod) {
     const since = vnDayStart(days - 1);
