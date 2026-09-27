@@ -24,6 +24,7 @@ import type {
  */
 
 const ACK_TIMEOUT_MS = 10_000;
+const QUALITY_POLL_MS = 3000;
 const SELF = "self";
 
 export type CallOutcome = { ok: true } | { ok: false; reason: CallFailure };
@@ -32,6 +33,7 @@ interface Media {
   stream: MediaStream;
   mesh: PeerMesh;
   levels: AudioLevels;
+  qualityTimer: ReturnType<typeof setInterval>;
 }
 
 let media: Media | null = null;
@@ -71,6 +73,7 @@ function teardown() {
   if (media) {
     media.mesh.closeAll();
     media.levels.close();
+    clearInterval(media.qualityTimer);
     stopStream(media.stream);
     media = null;
   }
@@ -107,7 +110,12 @@ function buildMedia(kind: CallSession["kind"], id: string, stream: MediaStream, 
       });
     },
   });
-  return { stream, mesh, levels };
+  const qualityTimer = setInterval(() => {
+    void mesh.sampleQuality().then((quality) => {
+      if (media?.mesh === mesh) updateSession((session) => ({ ...session, quality }));
+    });
+  }, QUALITY_POLL_MS);
+  return { stream, mesh, levels, qualityTimer };
 }
 
 function remapSelf(speaking: Record<string, boolean>) {
@@ -138,7 +146,7 @@ async function enterVoice(
   setVoiceState((current) => ({
     ...current,
     micError: null,
-    session: { ...target, callId: null, muted: false, deafened: false, peers: {}, speaking: {} },
+    session: { ...target, callId: null, muted: false, deafened: false, peers: {}, speaking: {}, quality: {} },
   }));
 
   const stream = await openMic();

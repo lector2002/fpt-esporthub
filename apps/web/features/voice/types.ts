@@ -100,4 +100,19 @@ export interface CallSession {
   peers: Record<string, RTCPeerConnectionState>;
   /** Speaking flag per user, including the viewer. */
   speaking: Record<string, boolean>;
+  /** Connection quality per remote user, sampled every few seconds. */
+  quality: Record<string, PeerQuality>;
+}
+
+export interface PeerQuality {
+  /** Audio goes through a TURN relay instead of straight between the two devices. */
+  relay: boolean;
+  /** "udp" or "tcp"; TCP turns packet loss into delay spikes. */
+  protocol: string | null;
+  rttMs: number | null;
+  jitterMs: number | null;
+  /** Incoming audio packets lost since the previous sample. */
+  lossPct: number;
+  /** Opus with redundancy (RED) was negotiated, so single lost packets are rebuilt. */
+  redundancy: boolean;
 }

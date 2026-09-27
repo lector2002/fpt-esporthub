@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { HeadphoneOff, Headphones, Loader2, Mic, MicOff, PhoneOff, Volume2 } from "lucide-react";
+import { HeadphoneOff, Headphones, Loader2, Mic, MicOff, PhoneOff, SignalLow, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { joinRoom, leaveCall, toggleDeafen, toggleMute } from "@/features/voice/call-controller";
+import { useQualityLabel } from "@/features/voice/components/connection-quality";
 import { failureKey, useVoiceMessages } from "@/features/voice/messages";
+import { isPoorQuality } from "@/features/voice/peer-quality";
 import { useVoiceState } from "@/features/voice/store";
 import type { CallSession, RoomParticipant } from "@/features/voice/types";
 import { useSession } from "@/lib/session";
@@ -107,6 +109,7 @@ export function VoiceOccupant({
   selfId?: string;
 }) {
   const v = useVoiceMessages().t;
+  const qualityLabel = useQualityLabel();
   const isSelf = participant.userId === selfId;
   // Own state is applied locally at once; others come from the server.
   const muted = isSelf && session ? session.muted : participant.muted;
@@ -115,6 +118,8 @@ export function VoiceOccupant({
   const speaking = Boolean(session?.speaking[participant.userId]) && !muted;
   const name = isSelf ? v("you") : participant.displayName;
   const connection = session && !isSelf ? (session.peers[participant.userId] ?? "new") : undefined;
+  const quality = connection === "connected" ? session?.quality[participant.userId] : undefined;
+  const poor = isPoorQuality(quality);
 
   return (
     <li
@@ -123,10 +128,14 @@ export function VoiceOccupant({
       data-speaking={speaking || undefined}
       data-muted={muted || undefined}
       data-deafened={deafened || undefined}
+      data-route={quality ? (quality.relay ? "relay" : "direct") : undefined}
+      data-poor-connection={poor || undefined}
+      title={qualityLabel(quality) ?? undefined}
       className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-muted-foreground"
     >
       <UserAvatar name={participant.displayName} imageKey={imageKey} className={cn("size-6 ring-2 ring-transparent transition-shadow", speaking && "ring-success")} />
       <span className={cn("min-w-0 flex-1 truncate", speaking && "text-foreground")}>{participant.displayName}</span>
+      {poor && <SignalLow className="size-3.5 text-warning" aria-label={`${name}, ${v("weakConnection")}`} />}
       {deafened ? (
         <HeadphoneOff className="size-3.5 text-destructive" aria-label={`${name}, ${v("deafened")}`} />
       ) : muted ? (

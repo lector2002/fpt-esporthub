@@ -1,4 +1,5 @@
-import type { SignalData } from "./types";
+import { readQuality, type PacketCounter } from "./peer-quality";
+import type { PeerQuality, SignalData } from "./types";
 
 /**
  * Full-mesh audio: one RTCPeerConnection per remote participant.
@@ -12,6 +13,7 @@ interface Peer {
   pending: RTCIceCandidateInit[];
   /** Serializes signal handling per peer. */
   queue: Promise<void>;
+  packets?: PacketCounter;
 }
 
 export interface PeerMeshOptions {
@@ -94,6 +96,19 @@ export class PeerMesh {
     this.options.onClosed(userId);
   }
 
+  /** One quality sample per peer that has picked a route. */
+  async sampleQuality() {
+    const samples = await Promise.all(
+      [...this.peers].map(async ([userId, peer]) => {
+        const sample = await readQuality(peer.pc, peer.packets).catch(() => null);
+        if (!sample) return null;
+        peer.packets = sample.counter;
+        return [userId, sample.quality] as const;
+      }),
+    );
+    return Object.fromEntries(samples.filter((sample) => sample !== null)) as Record<string, PeerQuality>;
+  }
+
   closeAll() {
     for (const userId of [...this.peers.keys()]) this.close(userId);
   }
@@ -104,6 +119,7 @@ export class PeerMesh {
     const { iceServers, stream } = this.options;
     const pc = new RTCPeerConnection({ iceServers });
     for (const track of stream.getTracks()) pc.addTrack(track, stream);
+    preferRedundantAudio(pc);
     const audio = new Audio();
     audio.autoplay = true;
     audio.muted = this.deafened;
@@ -132,5 +148,24 @@ export class PeerMesh {
   /** Errors are swallowed per step: a broken peer shows up as a failed connectionState, not a crash. */
   private enqueue(peer: Peer, step: () => Promise<void>) {
     peer.queue = peer.queue.then(step).catch(() => undefined);
+  }
+}
+
+/**
+ * Puts RED first: every packet also carries the previous Opus frame, so a lost packet is rebuilt instead of
+ * concealed (which is what sounds buzzy and robotic). Plain Opus stays in the list for peers without RED.
+ */
+function preferRedundantAudio(pc: RTCPeerConnection) {
+  const codecs = typeof RTCRtpReceiver.getCapabilities === "function" ? RTCRtpReceiver.getCapabilities("audio")?.codecs : undefined;
+  if (!codecs) return;
+  const isRed = (codec: (typeof codecs)[number]) => codec.mimeType.toLowerCase() === "audio/red";
+  if (!codecs.some(isRed)) return;
+  const ordered = [...codecs.filter(isRed), ...codecs.filter((codec) => !isRed(codec))];
+  for (const transceiver of pc.getTransceivers()) {
+    try {
+      transceiver.setCodecPreferences(ordered);
+    } catch {
+      // Keep the browser's default codecs.
+    }
   }
 }

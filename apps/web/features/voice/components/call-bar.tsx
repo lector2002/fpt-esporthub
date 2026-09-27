@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HeadphoneOff, Headphones, Mic, MicOff, PhoneOff } from "lucide-react";
+import { HeadphoneOff, Headphones, Mic, MicOff, PhoneOff, SignalLow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAvatar } from "@/components/common/user-avatar";
@@ -11,8 +11,10 @@ import { useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { leaveCall, toggleDeafen, toggleMute } from "../call-controller";
 import { useVoiceMessages } from "../messages";
+import { isPoorQuality } from "../peer-quality";
 import { currentCall, currentRoom, useVoiceState } from "../store";
 import type { CallInfo, CallSession, RoomInfo } from "../types";
+import { useQualityLabel } from "./connection-quality";
 
 type CallStatus = "preparing" | "ringing" | "connecting" | "connected";
 
@@ -143,6 +145,7 @@ interface ParticipantAvatarProps {
 
 function ParticipantAvatar({ participant, session, selfId }: ParticipantAvatarProps) {
   const { t } = useVoiceMessages();
+  const qualityLabel = useQualityLabel();
   const isSelf = participant.userId === selfId;
   // Own mute is applied locally at once; peers' mute comes from the server.
   const muted = isSelf ? session.muted : participant.muted;
@@ -150,6 +153,8 @@ function ParticipantAvatar({ participant, session, selfId }: ParticipantAvatarPr
   const speaking = Boolean(session.speaking[participant.userId]) && !muted;
   const connection = isSelf ? undefined : (session.peers[participant.userId] ?? "new");
   const name = isSelf ? t("you") : participant.displayName;
+  const quality = isSelf ? undefined : session.quality[participant.userId];
+  const poor = connection === "connected" && isPoorQuality(quality);
   const state = deafened
     ? t("deafened")
     : muted
@@ -160,8 +165,11 @@ function ParticipantAvatar({ participant, session, selfId }: ParticipantAvatarPr
         ? t("peerConnecting")
         : speaking
           ? t("speaking")
-          : null;
+          : poor
+            ? t("weakConnection")
+            : null;
   const description = state ? `${name}, ${state}` : name;
+  const details = connection === "connected" ? qualityLabel(quality) : null;
 
   return (
     <li
@@ -169,6 +177,9 @@ function ParticipantAvatar({ participant, session, selfId }: ParticipantAvatarPr
       data-connection-state={connection}
       data-speaking={speaking || undefined}
       data-muted={muted || undefined}
+      data-route={quality ? (quality.relay ? "relay" : "direct") : undefined}
+      data-redundancy={quality?.redundancy || undefined}
+      data-poor-connection={poor || undefined}
       className="relative"
     >
       <Tooltip>
@@ -184,11 +195,19 @@ function ParticipantAvatar({ participant, session, selfId }: ParticipantAvatarPr
             />
           </span>
         </TooltipTrigger>
-        <TooltipContent>{description}</TooltipContent>
+        <TooltipContent>
+          {description}
+          {details && <span className="block text-xs opacity-80">{details}</span>}
+        </TooltipContent>
       </Tooltip>
       {muted && (
         <span className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-background ring-2 ring-card" aria-hidden>
           {deafened ? <HeadphoneOff className="size-2.5" /> : <MicOff className="size-2.5" />}
+        </span>
+      )}
+      {poor && (
+        <span className="absolute -bottom-0.5 -left-0.5 flex size-4 items-center justify-center rounded-full bg-warning text-background ring-2 ring-card" aria-hidden>
+          <SignalLow className="size-2.5" />
         </span>
       )}
     </li>

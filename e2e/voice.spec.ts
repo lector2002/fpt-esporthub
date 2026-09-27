@@ -69,7 +69,11 @@ test("A calls B, B accepts, both connect, mute toggles and leaving ends the call
     [pageB, alice],
   ] as const) {
     await expect(callBar(page)).toHaveAttribute("data-call-status", "connected", { timeout: 20_000 });
-    await expect(callBar(page).locator(`[data-user-id="${other.id}"]`)).toHaveAttribute("data-connection-state", "connected");
+    const peer = callBar(page).locator(`[data-user-id="${other.id}"]`);
+    await expect(peer).toHaveAttribute("data-connection-state", "connected");
+    // Quality stats arrive within a few seconds; audio uses Opus with redundancy (RED) so lost packets don't buzz.
+    await expect(peer).toHaveAttribute("data-route", "direct", { timeout: 10_000 });
+    await expect(peer).toHaveAttribute("data-redundancy", "true");
   }
   await expect(callButton(pageA)).toBeDisabled();
 
