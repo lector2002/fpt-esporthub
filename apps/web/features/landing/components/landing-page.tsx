@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarClock, Crosshair, Gauge, MessagesSquare, Search, Target, UserPlus, Users } from "lucide-react";
+import { ArrowRight, Play, CalendarClock, Crosshair, Gauge, MessagesSquare, Search, Target, UserPlus, Users } from "lucide-react";
 import { BrandMark } from "@/features/auth/components/brand-panel";
 import { Button } from "@/components/ui/button";
 import { GAMES } from "@/lib/contracts";
@@ -107,22 +108,48 @@ function Hero({ t, authenticated }: { t: LandingT; authenticated: boolean }) {
   );
 }
 
+const INTRO_YOUTUBE_ID = "U0_TYpN6TX4";
+const INTRO_POSTER = "/videos/fpt-esporthub-intro-poster.webp";
+const VIDEO_FRAME = "aspect-video w-full overflow-hidden rounded-xl border border-border bg-card";
+
+/** Poster until clicked, then YouTube (streams from caches inside Vietnamese ISPs). The self-hosted copy is the fallback. */
 function IntroVideo({ t }: { t: LandingT }) {
+  const [player, setPlayer] = useState<"poster" | "youtube" | "file">("poster");
+
   return (
     <section className="flex flex-col gap-4" aria-labelledby="intro-video-title">
       <h2 id="intro-video-title" className="text-lg font-semibold">
         {t("introTitle")}
       </h2>
-      <video
-        controls
-        playsInline
-        preload="metadata"
-        poster="/videos/fpt-esporthub-intro-poster.webp"
-        aria-labelledby="intro-video-title"
-        className="aspect-video w-full rounded-xl border border-border bg-card"
-      >
-        <source src="/videos/fpt-esporthub-intro.mp4" type="video/mp4" />
-      </video>
+      {player === "poster" && (
+        <button type="button" onClick={() => setPlayer("youtube")} className={`group relative ${VIDEO_FRAME}`}>
+          <img src={INTRO_POSTER} alt="" loading="lazy" className="size-full object-cover" />
+          {/* Bottom corner: the poster's center holds the logo and name. */}
+          <span className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-primary p-2.5 font-medium text-primary-foreground shadow-lg transition-transform group-hover:scale-105 group-focus-visible:scale-105 sm:bottom-5 sm:left-5 sm:px-4">
+            <Play className="size-4 fill-current sm:size-5" aria-hidden />
+            <span className="max-sm:sr-only">{t("introPlay")}</span>
+          </span>
+        </button>
+      )}
+      {player === "youtube" && (
+        <iframe
+          src={`https://www.youtube-nocookie.com/embed/${INTRO_YOUTUBE_ID}?autoplay=1&rel=0&playsinline=1`}
+          title={t("introTitle")}
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          className={VIDEO_FRAME}
+        />
+      )}
+      {player === "file" && (
+        <video controls autoPlay playsInline poster={INTRO_POSTER} aria-labelledby="intro-video-title" className={VIDEO_FRAME}>
+          <source src="/videos/fpt-esporthub-intro.mp4" type="video/mp4" />
+        </video>
+      )}
+      {player === "youtube" && (
+        <button type="button" onClick={() => setPlayer("file")} className="self-start text-sm text-muted-foreground underline-offset-4 hover:underline">
+          {t("introFallback")}
+        </button>
+      )}
     </section>
   );
 }
