@@ -9,6 +9,7 @@ import {
   ServiceUnavailableException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { RealtimeService } from "../realtime/realtime.service";
 import { TOPUP_PACKAGES, creditsCoachingEnabled, topUpPackage } from "./credit-pricing";
 import { InsufficientCreditsError, applyCredit, isDuplicateRef, type LedgerEntry } from "./credit-ledger";
 import { PAYMENT_PROVIDER, type PaymentProvider } from "./payment-provider";
@@ -24,8 +25,14 @@ export class CreditsService {
 
   constructor(
     private prisma: PrismaService,
+    private realtime: RealtimeService,
     @Inject(PAYMENT_PROVIDER) private provider: PaymentProvider | null,
   ) {}
+
+  /** Tells the user's open tabs to reload their balance. Call only after the change has committed. */
+  notifyBalance(userId: string) {
+    this.realtime.emitToUser(userId, "credits:changed", {});
+  }
 
   async getMine(userId: string) {
     const [user, transactions, topUps] = await Promise.all([
@@ -114,11 +121,14 @@ export class CreditsService {
 
   /**
    * Spends or refunds credits for an app feature. Throws ConflictException when the balance is short.
-   * Pass `tx` to join a caller's transaction.
+   * Pass `tx` to join a caller's transaction; the caller then calls `notifyBalance` once it commits.
    */
   async apply(entry: LedgerEntry, tx?: Parameters<typeof applyCredit>[0]) {
     try {
-      return tx ? await applyCredit(tx, entry) : await this.prisma.$transaction((inner) => applyCredit(inner, entry));
+      if (tx) return await applyCredit(tx, entry);
+      const result = await this.prisma.$transaction((inner) => applyCredit(inner, entry));
+      if (result.applied) this.notifyBalance(entry.userId);
+      return result;
     } catch (error) {
       if (error instanceof InsufficientCreditsError) throw new ConflictException("Not enough credits. Top up in your wallet.");
       if (isDuplicateRef(error)) return { applied: false, balance: null };
@@ -145,20 +155,22 @@ export class CreditsService {
   /** Marks the order paid and credits it once. The amount must match what we asked for. */
   private async settle(orderCode: number, paidVnd: number) {
     try {
-      await this.prisma.$transaction(async (tx) => {
+      const creditedUserId = await this.prisma.$transaction(async (tx) => {
         const topUp = await tx.creditTopUp.findUniqueOrThrow({ where: { orderCode } });
         if (paidVnd !== topUp.amountVnd) {
           this.logger.warn(`Top-up ${orderCode}: paid ${paidVnd} VND, expected ${topUp.amountVnd}; not credited`);
-          return;
+          return null;
         }
         // Cancelled orders are included: money that did arrive is always credited.
         const marked = await tx.creditTopUp.updateMany({
           where: { orderCode, status: { in: ["PENDING", "CANCELLED"] } },
           data: { status: "PAID", paidAt: new Date() },
         });
-        if (marked.count === 0) return;
+        if (marked.count === 0) return null;
         await applyCredit(tx, { userId: topUp.userId, amount: topUp.credits, kind: "TOPUP", ref: `topup:${orderCode}`, note: `${topUp.amountVnd} VND` });
+        return topUp.userId;
       });
+      if (creditedUserId) this.notifyBalance(creditedUserId);
     } catch (error) {
       if (!isDuplicateRef(error)) throw error;
     }

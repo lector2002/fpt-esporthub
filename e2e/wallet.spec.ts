@@ -55,9 +55,16 @@ test("a player tops up through checkout and spends credits on a boost", async ({
   await adminContext.close();
 });
 
-test("an admin grants credits from the credit ledger", async ({ page }) => {
+test("an admin grants credits from the credit ledger", async ({ page, browser }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const [player, admin] = await Promise.all([createPlayer("E2E Grant", [LOL]), loginUser(SEEDED_ADMIN.email, SEEDED_ADMIN.password)]);
+  // The player keeps the app open the whole time and never reloads.
+  const playerContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await setEnglish(playerContext);
+  const playerPage = await playerContext.newPage();
+  await signIn(playerPage, player, LOL);
+  await playerPage.goto("/dashboard");
+  await expect(playerPage.getByTestId("topbar-balance")).toHaveText("0");
   await signIn(page, admin);
   await page.goto("/admin");
 
@@ -73,6 +80,8 @@ test("an admin grants credits from the credit ledger", async ({ page }) => {
   await expect(confirm).toContainText(`Add 15 credits to ${player.displayName}?`);
   await confirm.getByRole("button", { name: "Apply" }).click();
   await expect(toast(page, "Balance adjusted")).toBeVisible();
+  await expect(playerPage.getByTestId("topbar-balance")).toHaveText("15");
+  await playerContext.close();
 
   // The ledger follows the picked user.
   await expect(page.getByRole("button", { name: "Clear filter" })).toBeVisible();

@@ -7,6 +7,7 @@ import type { Socket } from "socket.io-client";
 import { API_ORIGIN, getToken } from "@/lib/api-client";
 import { useSession } from "@/lib/session";
 import { INBOX_COUNTS_QUERY_KEY } from "@/features/comms/use-inbox-counts";
+import { WALLET_KEY } from "@/features/credits/api";
 import { CONVERSATIONS_QUERY_KEY, CONVERSATION_QUERY_PREFIX, appendMessage } from "./api";
 import type { MessageNewEvent } from "./types";
 
@@ -44,10 +45,13 @@ export function useRealtimeSync() {
       void queryClient.invalidateQueries({ queryKey: INBOX_COUNTS_QUERY_KEY });
       void queryClient.invalidateQueries({ queryKey: CONVERSATIONS_QUERY_KEY });
     };
+    // Balance moved elsewhere: an admin grant, a paid top-up, a coach agreeing or cancelling.
+    const invalidateWallet = () => void queryClient.invalidateQueries({ queryKey: [...WALLET_KEY, "me"] });
     const onConnect = () => {
       // After a reconnect, catch up on anything missed while offline.
       if (connectedBefore) {
         onRequestEvent();
+        invalidateWallet();
         void queryClient.invalidateQueries({ queryKey: CONVERSATION_QUERY_PREFIX });
       }
       connectedBefore = true;
@@ -64,12 +68,14 @@ export function useRealtimeSync() {
     client.on("connect", onConnect);
     client.on("message:new", onMessage);
     client.on("counts:changed", invalidateInbox);
+    client.on("credits:changed", invalidateWallet);
     for (const name of REQUEST_EVENTS) client.on(name, onRequestEvent);
     client.connect();
     return () => {
       client.off("connect", onConnect);
       client.off("message:new", onMessage);
       client.off("counts:changed", invalidateInbox);
+      client.off("credits:changed", invalidateWallet);
       for (const name of REQUEST_EVENTS) client.off(name, onRequestEvent);
       client.disconnect();
     };

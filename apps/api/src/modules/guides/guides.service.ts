@@ -60,7 +60,7 @@ export class GuidesService {
 
   async buyPremium(userId: string) {
     await assertCanInteract(this.prisma, userId);
-    return this.prisma.$transaction(async (tx) => {
+    const bought = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { premiumUntil: true } });
       const { balance } = await this.credits.apply(
         { userId, amount: -PREMIUM_PASS.credits, kind: "GUIDE", ref: `guide-pass:${randomUUID()}`, note: `${PREMIUM_PASS.days}-day guides premium` },
@@ -69,5 +69,7 @@ export class GuidesService {
       const updated = await tx.user.update({ where: { id: userId }, data: { premiumUntil: extendPremium(user.premiumUntil) }, select: { premiumUntil: true } });
       return { premiumUntil: updated.premiumUntil, balance };
     });
+    this.credits.notifyBalance(userId);
+    return bought;
   }
 }

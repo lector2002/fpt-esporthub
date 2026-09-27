@@ -37,6 +37,7 @@ export class CosmeticsService {
       await tx.userCosmetic.create({ data: { userId, itemId } });
       await tx.user.update({ where: { id: userId }, data: { [EQUIPPED_FIELD[item.kind]]: itemId } });
     });
+    this.credits.notifyBalance(userId);
     return this.getMine(userId);
   }
 

@@ -60,6 +60,11 @@ export class CoachingSettlementService implements OnModuleInit, OnModuleDestroy 
     await tx.coachingRequest.update({ where: { id: request.id }, data: { creditHold: amount, settlement: "HELD" } });
   }
 
+  /** After a transaction that held or refunded the player's credits. */
+  notifyPlayer(playerId: string) {
+    this.credits.notifyBalance(playerId);
+  }
+
   /** Inside the CANCELLED transition of an agreed session. */
   async refund(tx: Tx, request: HeldSession) {
     if (!request.creditHold) return;
@@ -102,6 +107,7 @@ export class CoachingSettlementService implements OnModuleInit, OnModuleDestroy 
     const request = await this.prisma.coachingRequest.findUnique({ where: { id: requestId } });
     if (!request || request.settlement !== "DISPUTED") throw new NotFoundException("No open dispute for this session");
     await this.prisma.$transaction((tx) => (outcome === "release" ? this.release(tx, request) : this.refund(tx, request)));
+    if (outcome === "refund") this.notifyPlayer(request.playerId);
     return { settlement: outcome === "release" ? "RELEASED" : "REFUNDED" };
   }
 

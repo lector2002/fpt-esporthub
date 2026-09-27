@@ -128,6 +128,7 @@ export class CoachingRequestsService {
       if (status === "AGREED") await this.settlement.hold(tx, request, userId === request.playerId);
       if (status === "CANCELLED") await this.settlement.refund(tx, request);
     });
+    if (status !== "DECLINED") this.settlement.notifyPlayer(request.playerId);
     const updated = await this.prisma.coachingRequest.findUniqueOrThrow({ where: { id: request.id }, include: REQUEST_INCLUDE });
     return { request: toRequestView(updated, userId, now) };
   }
