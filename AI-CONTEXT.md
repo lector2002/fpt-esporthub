@@ -80,6 +80,7 @@ Rework (2026-09-26) is integrated: 9 feature workers done, orchestrator integrat
 ## Now
 
 - Dev servers: `npm run dev` (web :3000, API :4000). DB container `fpt-esporthub-postgres`.
+- Admin console (2026-09-27): `/admin/*` renders `components/shell/admin-shell.tsx` (grouped sidebar from `features/admin/nav.ts`, no game switcher/wallet/inbox/chat hub) instead of the player shell; each old tab is a route `/admin/[section]`. Home `/admin` = finance dashboard (`features/admin/components/finance-page.tsx` + `finance-cards.tsx`, API `GET /admin/finance?days=7|30|90` in `modules/admin/admin-finance.service.ts`: revenue from PAID top-ups, credits held, spend by kind, coaching owed, daily series in Vietnam days, top buyers, recent top-ups). Account menu hides player links when the user has no game profile; admins with a profile get "Back to the app".
 - Voice: `features/voice/` + `modules/realtime/call-*.ts`; ICE endpoint `GET /realtime/ice-servers` (TURN only when `TURN_URLS` + `TURN_SECRET` set). Block ends calls server-side; `call:*` rate cap 60/10s per socket; mute state shared.
 - ARAM: `playModes` on LoL profiles, `mode` on teams, `playMode` on `/match/find`; ARAM-only = Unranked/Fill; `AramBadge` in `components/common/badges.tsx`.
 - Known minor: `/profile/me#riot` cold-load anchor lands mid-page; focus returns to body after SafetyMenu dialogs close.

@@ -2,7 +2,6 @@ import { defineMessages } from "@/lib/i18n";
 
 export const useAdminMessages = defineMessages({
   vi: {
-    title: "Quản trị",
     noAccess: "Không có quyền truy cập",
     noAccessDescription: "Trang này chỉ dành cho quản trị viên.",
     tabOverview: "Tổng quan",
@@ -13,6 +12,13 @@ export const useAdminMessages = defineMessages({
     tabVenues: "Quán net",
     tabCoaches: "Huấn luyện viên",
     tabCredits: "Credits",
+    tabFinance: "Doanh thu",
+    groupFinance: "Tài chính",
+    groupCommunity: "Cộng đồng",
+    groupContent: "Nội dung",
+    console: "Bảng quản trị",
+    backToApp: "Về ứng dụng",
+    openMenu: "Mở menu quản trị",
     coachFilterAll: "Tất cả",
     coachStatus_PENDING: "Chờ duyệt",
     coachStatus_APPROVED: "Đã duyệt",
@@ -135,7 +141,6 @@ export const useAdminMessages = defineMessages({
     nextPage: "Trang sau",
   },
   en: {
-    title: "Admin",
     noAccess: "No access",
     noAccessDescription: "This page is for admins only.",
     tabOverview: "Overview",
@@ -146,6 +151,13 @@ export const useAdminMessages = defineMessages({
     tabVenues: "Venues",
     tabCoaches: "Coaches",
     tabCredits: "Credits",
+    tabFinance: "Revenue",
+    groupFinance: "Finance",
+    groupCommunity: "Community",
+    groupContent: "Content",
+    console: "Admin console",
+    backToApp: "Back to the app",
+    openMenu: "Open admin menu",
     coachFilterAll: "All",
     coachStatus_PENDING: "Pending",
     coachStatus_APPROVED: "Approved",

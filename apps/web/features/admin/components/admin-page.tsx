@@ -3,10 +3,11 @@
 import { ShieldX } from "lucide-react";
 import { EmptyState, ListSkeleton } from "@/components/common/query-state";
 import { PageHeader } from "@/components/common/page-header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession } from "@/lib/session";
 import { useAdminMessages } from "../messages";
+import { ADMIN_SECTIONS, type AdminSectionKey } from "../nav";
 import { EventsTab } from "./events-tab";
+import { FinancePage } from "./finance-page";
 import { OverviewTab } from "./overview-tab";
 import { ReportsTab } from "./reports-tab";
 import { TeamsTab } from "./teams-tab";
@@ -15,18 +16,19 @@ import { VenuesTab } from "./venues-tab";
 import { CoachesTab } from "./coaches-tab";
 import { AdminCreditsTab } from "@/features/credits/components/admin-credits-tab";
 
-const TABS = [
-  { value: "overview", label: "tabOverview", Content: OverviewTab },
-  { value: "users", label: "tabUsers", Content: UsersTab },
-  { value: "reports", label: "tabReports", Content: ReportsTab },
-  { value: "teams", label: "tabTeams", Content: TeamsTab },
-  { value: "events", label: "tabEvents", Content: EventsTab },
-  { value: "venues", label: "tabVenues", Content: VenuesTab },
-  { value: "coaches", label: "tabCoaches", Content: CoachesTab },
-  { value: "credits", label: "tabCredits", Content: AdminCreditsTab },
-] as const;
+const SECTIONS = {
+  credits: AdminCreditsTab,
+  overview: OverviewTab,
+  users: UsersTab,
+  reports: ReportsTab,
+  teams: TeamsTab,
+  events: EventsTab,
+  venues: VenuesTab,
+  coaches: CoachesTab,
+} satisfies Record<AdminSectionKey, () => React.ReactNode>;
 
-export function AdminPage() {
+/** One page of the admin console. `null` is the console home: the finance dashboard. */
+export function AdminPage({ section }: { section: AdminSectionKey | null }) {
   const { t } = useAdminMessages();
   const { status, user } = useSession();
 
@@ -34,26 +36,14 @@ export function AdminPage() {
   if (user?.role !== "ADMIN") {
     return <EmptyState icon={ShieldX} title={t("noAccess")} description={t("noAccessDescription")} />;
   }
+  if (section === null) return <FinancePage />;
 
+  const Content = SECTIONS[section];
+  const item = ADMIN_SECTIONS.find((candidate) => candidate.section === section)!;
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={t("title")} />
-      <Tabs defaultValue="overview" className="gap-4">
-        <div className="-mx-1 overflow-x-auto px-1">
-          <TabsList>
-            {TABS.map((tab) => (
-              <TabsTrigger key={tab.value} value={tab.value}>
-                {t(tab.label)}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
-        {TABS.map(({ value, Content }) => (
-          <TabsContent key={value} value={value}>
-            <Content />
-          </TabsContent>
-        ))}
-      </Tabs>
+      <PageHeader title={t(item.labelKey)} />
+      <Content />
     </div>
   );
 }

@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { BrandMark } from "./brand-mark";
 
 /** Larger than the shadcn default: 40px rows, 20px icons; centered in the collapsed rail. */
-const ITEM = "h-10 gap-3 px-3 text-[0.9375rem] [&_svg]:size-5 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-2.5!";
+export const SIDEBAR_ITEM = "h-10 gap-3 px-3 text-[0.9375rem] [&_svg]:size-5 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-2.5!";
 
 export function AppSidebar({ user }: { user: SessionUser }) {
   const { t } = useShellMessages();
@@ -63,7 +63,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
                       asChild
                       isActive={isNavActive(pathname, item)}
                       tooltip={label}
-                      className={cn(ITEM, "data-[active=true]:bg-primary/10! data-[active=true]:text-primary!")}
+                      className={cn(SIDEBAR_ITEM, "data-[active=true]:bg-primary/10! data-[active=true]:text-primary!")}
                     >
                       <Link href={item.href}>
                         <item.icon />
@@ -80,7 +80,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip={toggleLabel} onClick={toggleSidebar} className={cn(ITEM, "text-muted-foreground")}>
+            <SidebarMenuButton tooltip={toggleLabel} onClick={toggleSidebar} className={cn(SIDEBAR_ITEM, "text-muted-foreground")}>
               {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
               <span>{toggleLabel}</span>
             </SidebarMenuButton>

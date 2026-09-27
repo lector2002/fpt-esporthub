@@ -9,8 +9,9 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { AdminService } from "./admin.service";
+import { AdminFinanceService } from "./admin-finance.service";
 import { AdminReportsService } from "./admin-reports.service";
-import { ListReportsQueryDto, ListTeamsQueryDto, ListUsersQueryDto, toPage } from "./dto/admin-query.dto";
+import { FinanceQueryDto, ListReportsQueryDto, ListTeamsQueryDto, ListUsersQueryDto, toPage } from "./dto/admin-query.dto";
 import { UpdateReportDto } from "./dto/update-report.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
 import { UpdateRecruitmentDto } from "./dto/update-recruitment.dto";
@@ -27,11 +28,17 @@ export class AdminController {
   constructor(
     private adminService: AdminService,
     private adminReportsService: AdminReportsService,
+    private adminFinanceService: AdminFinanceService,
   ) {}
 
   @Get("metrics")
   getMetrics() {
     return this.adminService.getMetrics();
+  }
+
+  @Get("finance")
+  getFinance(@Query() query: FinanceQueryDto) {
+    return this.adminFinanceService.getFinance(query.days ?? 30);
   }
 
   @Get("users")

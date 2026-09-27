@@ -8,7 +8,7 @@ import type { SessionUser } from "@/lib/contracts";
 import { useSession } from "@/lib/session";
 import { ShellSkeleton } from "./shell-skeleton";
 
-const isAdminPath = (pathname: string) => pathname === "/admin" || pathname.startsWith("/admin/");
+export const isAdminPath = (pathname: string) => pathname === "/admin" || pathname.startsWith("/admin/");
 
 const SignOutContext = createContext<(() => void) | null>(null);
 

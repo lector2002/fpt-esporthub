@@ -1,4 +1,6 @@
+import { Type } from "class-transformer";
 import { IsIn, IsNumberString, IsOptional, IsString, MaxLength } from "class-validator";
+import { FINANCE_PERIODS, type FinancePeriod } from "../admin-finance.service";
 
 export const USER_STATUSES = ["ACTIVE", "WARNED", "RESTRICTED", "BANNED"] as const;
 export const REPORT_STATUSES = ["PENDING", "REVIEWING", "RESOLVED", "DISMISSED"] as const;
@@ -21,6 +23,13 @@ export class ListUsersQueryDto extends PageQueryDto {
   @IsOptional()
   @IsIn(USER_STATUSES)
   status?: UserStatusValue;
+}
+
+export class FinanceQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsIn(FINANCE_PERIODS)
+  days?: FinancePeriod;
 }
 
 export class ListReportsQueryDto extends PageQueryDto {

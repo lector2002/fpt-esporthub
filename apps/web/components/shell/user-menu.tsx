@@ -19,12 +19,14 @@ import {
 import { useShellMessages } from "@/features/shell/messages";
 import type { SessionUser } from "@/lib/contracts";
 import type { Language } from "@/lib/i18n";
+import { useSession } from "@/lib/session";
 import { useSignOut } from "./auth-gate";
 
 /** Account menu at the right of the top bar. */
 export function UserMenu({ user }: { user: SessionUser }) {
   const { t, language, setLanguage } = useShellMessages();
   const signOut = useSignOut();
+  const { profiles } = useSession();
 
   return (
     <DropdownMenu>
@@ -44,31 +46,36 @@ export function UserMenu({ user }: { user: SessionUser }) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link href="/profile/me">
-              <UserRound /> {t("profile")}
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild className="md:hidden">
-            <Link href="/coaches">
-              <GraduationCap /> {t("coaching")}
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild className="md:hidden">
-            <Link href="/guides">
-              <BookOpen /> {t("guides")}
-            </Link>
-          </DropdownMenuItem>
-          {user.role === "ADMIN" && (
-            <DropdownMenuItem asChild className="md:hidden">
-              <Link href="/admin">
-                <ShieldCheck /> {t("admin")}
-              </Link>
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
+        {/* Player pages only: an admin without a game profile can use none of them. */}
+        {profiles.length > 0 && (
+          <>
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link href="/profile/me">
+                  <UserRound /> {t("profile")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="md:hidden">
+                <Link href="/coaches">
+                  <GraduationCap /> {t("coaching")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="md:hidden">
+                <Link href="/guides">
+                  <BookOpen /> {t("guides")}
+                </Link>
+              </DropdownMenuItem>
+              {user.role === "ADMIN" && (
+                <DropdownMenuItem asChild className="md:hidden">
+                  <Link href="/admin">
+                    <ShieldCheck /> {t("admin")}
+                  </Link>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuLabel className="flex items-center gap-1.5">
           <Languages className="size-3.5" /> {t("language")}
         </DropdownMenuLabel>

@@ -3,10 +3,12 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import type {
+  AdminFinance,
   AdminMetrics,
   AdminReport,
   AdminTeam,
   AdminUser,
+  FinancePeriod,
   Paged,
   ReportAction,
   ReportStatus,
@@ -31,6 +33,15 @@ export function useAdminMetrics() {
   return useQuery({
     queryKey: [...ADMIN_KEY, "metrics"],
     queryFn: () => api<AdminMetrics>("/admin/metrics"),
+  });
+}
+
+export function useAdminFinance(days: FinancePeriod) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "finance", days],
+    queryFn: () => api<AdminFinance>(`/admin/finance?days=${days}`),
+    placeholderData: keepPreviousData,
+    refetchInterval: 60_000,
   });
 }
 

@@ -9,6 +9,10 @@ export function formatDate(value: string, language: "vi" | "en", withTime = fals
   }).format(new Date(value));
 }
 
+export function formatNumber(value: number, language: "vi" | "en") {
+  return new Intl.NumberFormat(language === "vi" ? "vi-VN" : "en-US").format(value);
+}
+
 /** Below `sm`, admin tables become stacked rows: no header, first cell full width, last cell (actions) pushed right. */
 export const STACK_ON_PHONE =
   "max-sm:block max-sm:[&_tbody]:block max-sm:[&_thead]:hidden max-sm:[&_tr]:flex max-sm:[&_tr]:flex-wrap max-sm:[&_tr]:items-center max-sm:[&_tr]:gap-x-3 max-sm:[&_tr]:gap-y-1.5 max-sm:[&_tr]:py-3 max-sm:[&_td]:p-0 max-sm:[&_td]:whitespace-normal max-sm:[&_td:first-child]:basis-full max-sm:[&_td:last-child]:ml-auto";

@@ -8,7 +8,7 @@ test.beforeEach(async ({ context }) => {
   await setEnglish(context);
 });
 
-test("a player tops up through checkout and spends credits on a boost", async ({ page }) => {
+test("a player tops up through checkout and spends credits on a boost", async ({ page, browser }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const player = await createPlayer("E2E Wallet", [LOL]);
   await signIn(page, player, LOL);
@@ -42,15 +42,26 @@ test("a player tops up through checkout and spends credits on a boost", async ({
   await page.goto("/wallet");
   await expect(page.getByTestId("credit-balance")).toContainText("0");
   await expect(page.getByRole("cell", { name: "Profile boost" })).toBeVisible();
+
+  // The admin finance dashboard shows the paid top-up.
+  const adminContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await setEnglish(adminContext);
+  const adminPage = await adminContext.newPage();
+  await signIn(adminPage, await loginUser(SEEDED_ADMIN.email, SEEDED_ADMIN.password));
+  await adminPage.goto("/admin");
+  const topUp = adminPage.getByRole("row").filter({ hasText: player.displayName });
+  await expect(topUp).toContainText(/20[.,]000/);
+  await expect(topUp).toContainText("Paid");
+  await adminContext.close();
 });
 
-test("an admin grants credits from the credits tab", async ({ page }) => {
+test("an admin grants credits from the credit ledger", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const [player, admin] = await Promise.all([createPlayer("E2E Grant", [LOL]), loginUser(SEEDED_ADMIN.email, SEEDED_ADMIN.password)]);
   await signIn(page, admin);
   await page.goto("/admin");
 
-  await page.getByRole("tab", { name: "Credits" }).click();
+  await page.getByRole("navigation", { name: "Admin console" }).getByRole("link", { name: "Credits" }).click();
   await page.getByRole("combobox", { name: "User" }).click();
   await page.getByPlaceholder("Search name or email").fill(player.email);
   await page.getByRole("option", { name: new RegExp(player.displayName) }).click();

@@ -16,8 +16,7 @@ test("an admin adds registration details and players get a real register link", 
   const title = `E2E Cup ${uniqueTag()}`;
   const admin = await loginUser(SEEDED_ADMIN.email, SEEDED_ADMIN.password);
   await signIn(page, admin);
-  await page.goto("/admin");
-  await page.getByRole("tab", { name: "Events" }).click();
+  await page.goto("/admin/events");
   await page.getByRole("button", { name: "Create event" }).click();
 
   const dialog = page.getByRole("dialog");

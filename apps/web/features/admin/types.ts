@@ -8,6 +8,30 @@ export const USER_STATUSES: UserStatus[] = ["ACTIVE", "WARNED", "RESTRICTED", "B
 export const REPORT_STATUSES: ReportStatus[] = ["PENDING", "REVIEWING", "RESOLVED", "DISMISSED"];
 export const REPORT_ACTIONS: ReportAction[] = ["none", "warn", "restrict", "ban"];
 
+export type TopUpStatus = "PENDING" | "PAID" | "CANCELLED";
+export type SpendKind = "BOOST" | "FEATURE" | "COSMETIC" | "GUIDE" | "COACHING";
+export const FINANCE_PERIODS = [7, 30, 90] as const;
+export type FinancePeriod = (typeof FINANCE_PERIODS)[number];
+
+interface FinanceUser {
+  id: string;
+  displayName: string;
+  avatarKey: string | null;
+}
+
+export interface AdminFinance {
+  days: FinancePeriod;
+  since: string;
+  /** VND per credit, from the server's price list. */
+  creditVnd: number;
+  revenue: { vnd: number; previousVnd: number; orders: number; payingUsers: number; allTimeVnd: number; allTimeOrders: number };
+  orders: { paid: number; pending: number; cancelled: number };
+  credits: { outstanding: number; sold: number; granted: number; removed: number; spent: Record<SpendKind, number>; coachingOwed: number };
+  daily: { day: string; vnd: number; orders: number; creditsUsed: number }[];
+  topBuyers: { user: FinanceUser; vnd: number; orders: number }[];
+  recentTopUps: { orderCode: number; credits: number; amountVnd: number; status: TopUpStatus; provider: string; createdAt: string; paidAt: string | null; user: FinanceUser }[];
+}
+
 export interface Paged<T> {
   items: T[];
   total: number;
