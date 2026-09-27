@@ -42,6 +42,7 @@ export function LandingPage() {
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-14 px-4 py-12 lg:py-16">
         <Hero t={t} authenticated={authenticated} />
+        <IntroVideo t={t} />
         <HowItWorks t={t} />
         <SupportedGames t={t} />
       </main>
@@ -102,6 +103,26 @@ function Hero({ t, authenticated }: { t: LandingT; authenticated: boolean }) {
           ))}
         </ul>
       </div>
+    </section>
+  );
+}
+
+function IntroVideo({ t }: { t: LandingT }) {
+  return (
+    <section className="flex flex-col gap-4" aria-labelledby="intro-video-title">
+      <h2 id="intro-video-title" className="text-lg font-semibold">
+        {t("introTitle")}
+      </h2>
+      <video
+        controls
+        playsInline
+        preload="metadata"
+        poster="/videos/fpt-esporthub-intro-poster.webp"
+        aria-labelledby="intro-video-title"
+        className="aspect-video w-full rounded-xl border border-border bg-card"
+      >
+        <source src="/videos/fpt-esporthub-intro.mp4" type="video/mp4" />
+      </video>
     </section>
   );
 }
