@@ -10,7 +10,7 @@
     "dev": "node scripts/dev.mjs",
     "dev:web": "npm run dev --workspace @fpt-esporthub/web",
     "dev:api": "npm run start:dev --workspace @fpt-esporthub/api",
-    "build": "npm run db:generate && npm run build --workspace @fpt-esporthub/shared && npm run build --workspace @fpt-esporthub/api && npm run build --workspace @fpt-esporthub/web",
+    "build": "npm run db:generate && npm run build --workspace @fpt-esporthub/database && npm run build --workspace @fpt-esporthub/shared && npm run build --workspace @fpt-esporthub/api && npm run build --workspace @fpt-esporthub/web",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "db:generate": "npm run prisma:generate --workspace @fpt-esporthub/database",
@@ -18,7 +18,9 @@
     "db:seed": "npm run prisma:seed --workspace @fpt-esporthub/database",
     "smoke:api": "node scripts/smoke-api.mjs",
     "e2e": "playwright test",
-    "e2e:install": "playwright install chromium"
+    "e2e:install": "playwright install chromium",
+    "test:api": "tsx apps/api/test/call-state.test.ts && tsx apps/api/test/room-state.test.ts && tsx apps/api/test/ice-servers.test.ts && tsx apps/api/test/matching-fit.test.ts && tsx apps/api/test/matching-scoring.test.ts && tsx apps/api/test/report-access.test.ts && tsx apps/api/test/bracket.test.ts && tsx apps/api/test/image-pipeline.test.ts && tsx apps/api/test/credits.test.ts && tsx apps/api/test/cosmetics.test.ts && tsx apps/api/test/guides.test.ts && tsx apps/api/test/guides-opgg.test.ts && tsx apps/api/test/riot-suggest.test.ts && tsx --tsconfig apps/api/tsconfig.json apps/api/test/tournament-dto.test.ts",
+    "guides:import": "tsx apps/api/scripts/import-guides.ts"
   },
   "engines": {
     "node": ">=22.0.0",

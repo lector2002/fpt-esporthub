@@ -1,20 +1,7 @@
-import { IsDateString, IsInt, IsString, Min } from "class-validator";
+import { IsString } from "class-validator";
+import { CounterCoachingRequestDto } from "./counter-coaching-request.dto";
 
-export class CreateCoachingRequestDto {
+export class CreateCoachingRequestDto extends CounterCoachingRequestDto {
   @IsString()
   coachId!: string;
-
-  @IsDateString()
-  proposedStartAt!: string;
-
-  @IsInt()
-  @Min(30)
-  durationMinutes!: number;
-
-  @IsInt()
-  @Min(0)
-  proposedPrice!: number;
-
-  @IsString()
-  message!: string;
 }

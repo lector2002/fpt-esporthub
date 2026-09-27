@@ -13,25 +13,23 @@ import { CreateBlockDto } from "./dto/create-block.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
 @Controller("blocks")
+@UseGuards(JwtAuthGuard)
 export class BlocksController {
   constructor(private blocksService: BlocksService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Get()
   getMyBlocks(@Request() req: { user: { id: string } }) {
     return this.blocksService.getMyBlocks(req.user.id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post()
   create(
     @Request() req: { user: { id: string } },
     @Body() dto: CreateBlockDto,
   ) {
-    return this.blocksService.create(req.user.id, dto.blockedId);
+    return this.blocksService.create(req.user.id, dto.userId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete(":userId")
   remove(
     @Request() req: { user: { id: string } },

@@ -1,0 +1,89 @@
+# Production stack for the homelab. Nothing publishes a host port: traffic arrives only through the
+# Cloudflare Tunnel (`--profile tunnel`). Run from the release folder:
+#   docker compose -f deploy/docker-compose.yml --env-file ../.env.production --profile tunnel up -d --build
+name: fpt-esporthub
+
+x-build: &build
+  context: ..
+  dockerfile: deploy/Dockerfile
+  args:
+    NEXT_PUBLIC_API_URL: ${PUBLIC_URL:?set PUBLIC_URL}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: esporthub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: esporthub
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U esporthub -d esporthub"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      <<: *build
+      target: api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://esporthub:${POSTGRES_PASSWORD}@db:5432/esporthub?schema=public
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      WEB_ORIGIN: ${PUBLIC_URL}
+      PORT: "4000"
+      BEHIND_CLOUDFLARE: ${BEHIND_CLOUDFLARE:-true}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      RIOT_API_KEY: ${RIOT_API_KEY:-}
+      RIOT_PLATFORM: ${RIOT_PLATFORM:-vn2}
+      RIOT_MATCH_REGION: ${RIOT_MATCH_REGION:-sea}
+      RIOT_ACCOUNT_REGION: ${RIOT_ACCOUNT_REGION:-asia}
+      TURN_URLS: ${TURN_URLS:-}
+      TURN_SECRET: ${TURN_SECRET:-}
+      CLOUDFLARE_TURN_KEY_ID: ${CLOUDFLARE_TURN_KEY_ID:-}
+      CLOUDFLARE_TURN_API_TOKEN: ${CLOUDFLARE_TURN_API_TOKEN:-}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+      PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+      CREDITS_COACHING: ${CREDITS_COACHING:-false}
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      <<: *build
+      target: web
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - api
+      - web
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    depends_on:
+      - proxy
+
+volumes:
+  pgdata:
+  uploads:

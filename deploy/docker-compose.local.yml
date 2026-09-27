@@ -1,0 +1,9 @@
+# Local check of the production images without the tunnel: http://localhost:8080
+#   docker compose -p fpt-esporthub-test -f deploy/docker-compose.yml -f deploy/docker-compose.local.yml --env-file <env> up -d --build
+services:
+  api:
+    environment:
+      BEHIND_CLOUDFLARE: "false"
+  proxy:
+    ports:
+      - "127.0.0.1:8080:80"

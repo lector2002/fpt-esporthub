@@ -1,92 +1,67 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
+export type Badge = "NEW" | "VERIFIED" | "TRUSTED" | "CAUTION";
+
+const CAUTION_WINDOW_DAYS = 90;
+const TRUSTED_MIN_POINTS = 5;
+
 @Injectable()
 export class ReputationService {
   constructor(private prisma: PrismaService) {}
 
-  async computeBadge(userId: string): Promise<string> {
-    const profile = await this.prisma.playerProfile.findUnique({
-      where: { userId },
+  /**
+   * CAUTION: a RESOLVED report against the user in the last 90 days, or status WARNED/RESTRICTED.
+   * TRUSTED: a Riot VERIFIED game profile and >= 5 positive reputation points.
+   * VERIFIED: a Riot VERIFIED game profile. NEW otherwise.
+   */
+  async computeBadge(userId: string): Promise<Badge> {
+    if (await this.needsCaution(userId)) return "CAUTION";
+
+    const verified = await this.prisma.playerProfile.count({
+      where: { userId, verificationStatus: "VERIFIED" },
     });
+    if (verified === 0) return "NEW";
 
-    if (!profile) return "NEW";
+    const positive = await this.prisma.reputationRecord.aggregate({
+      where: { userId, points: { gt: 0 } },
+      _sum: { points: true },
+    });
+    return (positive._sum.points ?? 0) >= TRUSTED_MIN_POINTS ? "TRUSTED" : "VERIFIED";
+  }
 
-    if (
-      profile.verificationStatus === "SUSPENDED"
-    ) {
-      return "CAUTION";
-    }
+  async updateBadge(userId: string): Promise<Badge> {
+    const badge = await this.computeBadge(userId);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { reputationBadge: badge },
+    });
+    return badge;
+  }
 
-    const resolvedReports = await this.prisma.report.count({
+  /** Store a reputation event, then recompute the user's badge. */
+  async recordEvent(userId: string, type: string, points: number, note?: string): Promise<Badge> {
+    await this.prisma.reputationRecord.create({
+      data: { userId, type, points, note: note ?? null },
+    });
+    return this.updateBadge(userId);
+  }
+
+  private async needsCaution(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { status: true },
+    });
+    if (user?.status === "WARNED" || user?.status === "RESTRICTED") return true;
+
+    const since = new Date(Date.now() - CAUTION_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const recentResolved = await this.prisma.report.count({
       where: {
         reportedUserId: userId,
         status: "RESOLVED",
+        OR: [{ resolvedAt: { gte: since } }, { resolvedAt: null, createdAt: { gte: since } }],
       },
     });
-
-    if (resolvedReports > 0) {
-      return "CAUTION";
-    }
-
-    if (profile.verificationStatus === "VERIFIED") {
-      return "VERIFIED";
-    }
-
-    const totalRecords = await this.prisma.reputationRecord.count({
-      where: { userId },
-    });
-
-    if (totalRecords >= 5) {
-      return "TRUSTED";
-    }
-
-    if (profile.verificationStatus === "SELF_REPORTED") {
-      return "VERIFIED";
-    }
-
-    return "NEW";
-  }
-
-  async getReputationDetail(userId: string) {
-    const profile = await this.prisma.playerProfile.findUnique({
-      where: { userId },
-    });
-
-    const records = await this.prisma.reputationRecord.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const reportCount = await this.prisma.report.count({
-      where: { reportedUserId: userId },
-    });
-
-    const resolvedReportCount = await this.prisma.report.count({
-      where: { reportedUserId: userId, status: "RESOLVED" },
-    });
-
-    const totalPoints = records.reduce((sum, r) => sum + r.points, 0);
-    const badge = await this.computeBadge(userId);
-
-    return {
-      badge,
-      totalPoints,
-      verificationStatus: profile?.verificationStatus ?? "UNVERIFIED",
-      reportCount,
-      resolvedReportCount,
-      recordCount: records.length,
-    };
-  }
-
-  async updateBadge(userId: string): Promise<string> {
-    const badge = await this.computeBadge(userId);
-
-    await this.prisma.playerProfile.update({
-      where: { userId },
-      data: { reputationBadge: badge as "NEW" | "VERIFIED" | "TRUSTED" | "CAUTION" },
-    });
-
-    return badge;
+    return recentResolved > 0;
   }
 }

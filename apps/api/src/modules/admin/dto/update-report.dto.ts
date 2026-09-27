@@ -1,10 +1,13 @@
-import { IsIn, IsOptional, IsString } from "class-validator";
+import { IsIn, IsOptional } from "class-validator";
+
+export const REPORT_ACTIONS = ["none", "warn", "restrict", "ban"] as const;
+export type ReportAction = (typeof REPORT_ACTIONS)[number];
 
 export class UpdateReportDto {
   @IsIn(["REVIEWING", "RESOLVED", "DISMISSED"])
-  status!: string;
+  status!: "REVIEWING" | "RESOLVED" | "DISMISSED";
 
-  @IsString()
   @IsOptional()
-  resolution?: string;
+  @IsIn(REPORT_ACTIONS)
+  action?: ReportAction;
 }

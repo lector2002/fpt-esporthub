@@ -18,18 +18,22 @@ npm run dev:web
 npm run dev:api
 ```
 
-## Key Docs
+## Test Accounts
 
-- `AI-CONTEXT.md`
-- `docs/README.md`
-- `docs/architecture/Tech-Stack.md`
-- `docs/architecture/System-Architecture.md`
-- `docs/phase-1/MVP-Build-Spec.md`
-- `docs/phase-1/Engineering-Tickets.md`
-- `docs/phase-1/Sprint-Plan.md`
+Created by `packages/database/prisma/seed.ts` for local dev (http://localhost:3000) and the local production stack (http://localhost:8080). All use the password `Password123!`. Never seed these on a public deploy.
 
-## Phase 1 Core Loop
+| Email | Name | Use it to test |
+| --- | --- | --- |
+| `minh@fpt.edu.vn` | MinhNguyen | Main player: Valorant (Gold 2 Duelist) and LoL (Silver 1 Jungle) profiles, Find Match, teams, wallet |
+| `khoa@fpt.edu.vn` | KhoaSentinel | Valorant coach (sessions and reviews from other players) |
+| `anhtu@fpt.edu.vn` | AnhTuSupport | LoL coach, LoL Support player |
+| `linh@fpt.edu.vn` | LinhMid | LoL Mid player |
+| `hieu@fpt.edu.vn` | HieuSniper | Valorant Initiator player |
+| `venue@fpt-esporthub.local` | CyberCoreHoaLac | Internet cafe host: venue, offline cups, check-in desk |
+| `admin@fpt-esporthub.local` | Admin | Admin panel (`/admin`): users, reports, credits, events, venues |
 
-```text
-Register -> Onboarding/Profile -> Find Match -> Send Request -> Accept -> Basic Async Chat
-```
+## Production
+
+Live at https://fptesporthub.io.vn, served from the homelab through a Cloudflare Tunnel. Ship a new release with `bash deploy/deploy.sh homelab-an`; runbook in `deploy/README.md`.
+
+Admin account: the email and password are in `.env.admin` at the repo root on the owner's machine. That file is gitignored and never committed, because this repo is public. Change the password after the first sign-in.

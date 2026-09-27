@@ -1,6 +1,7 @@
-import { IsString } from "class-validator";
+import { IsString, MaxLength } from "class-validator";
 
 export class CreateBlockDto {
   @IsString()
-  blockedId!: string;
+  @MaxLength(64)
+  userId!: string;
 }

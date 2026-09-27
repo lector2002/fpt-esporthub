@@ -1,7 +1,9 @@
-import { IsString, MinLength } from "class-validator";
+import { Transform } from "class-transformer";
+import { IsString, Length } from "class-validator";
 
 export class SendMessageDto {
+  @Transform(({ value }) => (typeof value === "string" ? value.trim() : value))
   @IsString()
-  @MinLength(1)
+  @Length(1, 2000)
   content!: string;
 }

@@ -203,3 +203,20 @@ export function useLanguage() {
 
   return { language, setLanguage: setLanguagePreference, t };
 }
+
+function formatMessage(text: string, values?: Record<string, string | number>) {
+  if (!values) return text;
+  return Object.entries(values).reduce((result, [name, value]) => result.replaceAll(`{${name}}`, String(value)), text);
+}
+
+/**
+ * Per-feature dictionaries. Vietnamese is the source; English must define the same keys.
+ * Usage: `export const useAuthMessages = defineMessages({ vi: {...}, en: {...} })`, then `const { t } = useAuthMessages()`.
+ */
+export function defineMessages<const Vi extends Record<string, string>>(dictionary: { vi: Vi; en: Record<keyof Vi, string> }) {
+  return function useMessages() {
+    const { language, setLanguage } = useLanguage();
+    const t = (key: keyof Vi & string, values?: Record<string, string | number>) => formatMessage(dictionary[language][key], values);
+    return { t, language, setLanguage };
+  };
+}

@@ -2,227 +2,133 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ServiceUnavailableException,
 } from "@nestjs/common";
-import { GameId } from "@fpt-esporthub/database";
+import type { GameId, PlayerProfile } from "@fpt-esporthub/database";
+import { listAchievements } from "../media/achievement-view";
 import { PrismaService } from "../prisma/prisma.service";
+import { MatchingService } from "../matching/matching.service";
+import { isRiotLinked } from "../riot/riot-profile";
+import { RiotService } from "../riot/riot.service";
 import { OnboardingDto } from "./dto/onboarding.dto";
+import type { QuestionnaireDto } from "./dto/questionnaire.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
-
-const GAME_MAP: Record<string, GameId> = {
-  valorant: "VALORANT",
-  league_of_legends: "LEAGUE_OF_LEGENDS",
-};
+import { toCosmeticsView } from "../cosmetics/catalog";
+import { GAME_MAP, findActiveProfile, toGameSlug } from "../../common/game";
+import {
+  DEFAULT_PLAY_MODES,
+  FILL_ROLE,
+  UNRANKED_TIER,
+  gameRanks,
+  gameRoles,
+  isAramOnly,
+  supportsAram,
+} from "../lookups/lookup-data";
 
 function formatRank(rankTier: string, rankLevel: number | null) {
   return rankLevel ? `${rankTier} ${rankLevel}` : rankTier;
 }
 
-function buildReadiness(profile: {
-  bio: string | null;
-  game: string;
-  rankTier: string;
-  schedule: string[];
-  goals: string[];
-  communicationStyles: string[];
-  riotId: string | null;
-  verificationStatus: string;
-}) {
+/** LoL keeps the requested modes; Valorant (and a missing value) falls back to ["ranked"]. */
+function resolvePlayModes(gameSlug: string, requested: string[] | undefined) {
+  return requested && supportsAram(gameSlug) ? requested : DEFAULT_PLAY_MODES;
+}
+
+/** The dashboard's daily matches use ranked when the profile plays it, else ARAM. */
+function primaryPlayMode(profile: PlayerProfile) {
+  return profile.playModes.includes("ranked") ? "ranked" : "aram";
+}
+
+/** Readiness checks keyed by a stable id; the client owns the labels and the fix-it links. ARAM-only skips rank. */
+function buildReadiness(profile: PlayerProfile) {
+  // Valorant verification needs Riot Sign-On (not available yet), so a Riot ID on file counts as done.
+  const riotDone =
+    profile.game === "VALORANT" ? Boolean(profile.riotId) : isRiotLinked(profile) && Boolean(profile.riotId);
   const checks = [
-    { label: "Basic Info", complete: Boolean(profile.bio) },
-    { label: "Game & Rank", complete: Boolean(profile.game && profile.rankTier) },
-    { label: "Schedule", complete: profile.schedule.length > 0 },
-    { label: "Goals", complete: profile.goals.length > 0 },
-    { label: "Comm Style", complete: profile.communicationStyles.length >= 2 },
-    { label: "Riot ID Verification", complete: profile.verificationStatus === "VERIFIED" && Boolean(profile.riotId) },
-  ];
+    { id: "bio", complete: Boolean(profile.bio) },
+    { id: "rank", complete: Boolean(profile.rankTier && profile.role) },
+    { id: "schedule", complete: profile.schedule.length > 0 },
+    { id: "goals", complete: profile.goals.length > 0 },
+    { id: "communication", complete: profile.communicationStyles.length > 0 },
+    { id: "riot", complete: riotDone },
+    { id: "questionnaire", complete: profile.questionnaireAt !== null },
+  ].filter((check) => check.id !== "rank" || !isAramOnly(profile.playModes));
   const percent = Math.round((checks.filter((check) => check.complete).length / checks.length) * 100);
   return { percent, checks };
 }
 
-function buildGameConnections(profile: {
-  game: string;
-  riotId: string | null;
-  verificationStatus: string;
-}) {
-  const riotConnected = profile.verificationStatus === "VERIFIED" && Boolean(profile.riotId);
-  return [
-    {
-      game: "League of Legends",
-      gameId: "league_of_legends",
-      icon: "🧙",
-      status: riotConnected ? "connected" : profile.riotId ? "ready_to_verify" : "not_connected",
-      statusLabel: riotConnected ? "Connected" : profile.riotId ? "Ready to verify" : "Not connected",
-      description: "Dùng Riot ID để lấy PUUID, Summoner data và ranked info qua Riot API.",
-      requirement: "Cần RIOT_API_KEY. Xác minh sở hữu mạnh nên dùng RSO nếu mở public beta.",
-      complexity: "Medium",
-    },
-    {
-      game: "Valorant",
-      gameId: "valorant",
-      icon: "🔫",
-      status: riotConnected && profile.game === "VALORANT" ? "connected" : "requires_rso",
-      statusLabel: riotConnected && profile.game === "VALORANT" ? "Connected" : "Requires RSO",
-      description: "Valorant official APIs yêu cầu người chơi opt-in qua Riot Sign On để chia sẻ dữ liệu cá nhân.",
-      requirement: "Cần production key + RSO client. Personal key không hỗ trợ Valorant app.",
-      complexity: "High",
-    },
-  ];
-}
-
-function dashboardDefaults(game: "lol" | "val") {
-  if (game === "lol") {
-    return {
-      bio: "Mid main, kiểm soát bản đồ tốt. Thích try-hard ranked nhưng vẫn chill khi scrim.",
-      rank: "Emerald II",
-      role: "Mid",
-      commStyle: "Shotcaller",
-      playStyle: "Try-hard",
-      goal: "Leo Rank",
-      matchScore: 87,
-      pendingReqs: 2,
-      readiness: 90,
-      pills: [
-        { text: "📈 Leo rank LoL", cls: "lol" as const },
-        { text: "🏆 Scrim LoL", cls: "goal" as const },
-      ],
-      radar: {
-        points: "100,32 162.3,64 155.4,132 100,148 48,130 41,66",
-        coords: [
-          { cx: 100, cy: 32 },
-          { cx: 162.3, cy: 64 },
-          { cx: 155.4, cy: 132 },
-          { cx: 100, cy: 148 },
-          { cx: 48, cy: 130 },
-          { cx: 41, cy: 66 },
-        ],
-        labels: [
-          { x: 100, y: 12, text: "Mechanics" },
-          { x: 180, y: 60, text: "Map Aware" },
-          { x: 180, y: 145, text: "Teamfight" },
-          { x: 100, y: 195, text: "Vision" },
-          { x: 20, y: 145, text: "Lane Phase" },
-          { x: 20, y: 60, text: "Shotcall" },
-        ],
-      },
-      matches: [
-        { id: 1, map: "Summoner's Rift", score: "25/8/12", type: "Ranked", time: "2h ago", result: "Win" as const, sub: "CS: 234" },
-        { id: 2, map: "Summoner's Rift", score: "10/12/15", type: "Ranked", time: "5h ago", result: "Loss" as const, sub: "CS: 180" },
-        { id: 3, map: "Summoner's Rift", score: "18/4/8", type: "Scrim", time: "Hôm qua", result: "Win" as const, sub: "CS: 210" },
-      ],
-      dailyMatches: [
-        { id: 1, avatar: "⚡", name: "LongGG", desc: "Emerald 1 · Jungle", score: 87 },
-        { id: 2, avatar: "🛡️", name: "QuanTop", desc: "Diamond 4 · Top", score: 82 },
-      ],
-      pendingComms: { avatar: "🌸", name: "TrangKill", msg: "Scrim LoL tối nay không?" },
-    };
-  }
-
+/** Fields of a game profile that anyone signed in may see. Riot ID only once linked to a real account. */
+function toPublicGameProfile(profile: PlayerProfile) {
   return {
-    bio: "Duelist chính hiệu, Jett one-trick. Thích scrim nghiêm túc nhưng không toxic.",
-    rank: "Diamond 2",
-    role: "Duelist",
-    commStyle: "Shotcaller",
-    playStyle: "Aggressive",
-    goal: "Thi đấu giải",
-    matchScore: 92,
-    pendingReqs: 1,
-    readiness: 85,
-    pills: [
-      { text: "📈 Scrim Valorant", cls: "val" as const },
-      { text: "🏆 Thi đấu giải", cls: "goal" as const },
-    ],
-    radar: {
-      points: "100,40 148.5,72 162.3,136 100,140 44.6,132 54.9,74",
-      coords: [
-        { cx: 100, cy: 40 },
-        { cx: 148.5, cy: 72 },
-        { cx: 162.3, cy: 136 },
-        { cx: 100, cy: 140 },
-        { cx: 44.6, cy: 132 },
-        { cx: 54.9, cy: 74 },
-      ],
-      labels: [
-        { x: 100, y: 12, text: "Aim" },
-        { x: 180, y: 60, text: "Game Sense" },
-        { x: 180, y: 145, text: "Comms" },
-        { x: 100, y: 195, text: "Support" },
-        { x: 20, y: 145, text: "Clutch" },
-        { x: 20, y: 60, text: "Flex" },
-      ],
-    },
-    matches: [
-      { id: 1, map: "Haven", score: "13-7", type: "Ranked", time: "2h ago", result: "Win" as const, sub: "ACS: 312" },
-      { id: 2, map: "Ascent", score: "11-13", type: "Ranked", time: "4h ago", result: "Loss" as const, sub: "ACS: 210" },
-      { id: 3, map: "Bind", score: "13-9", type: "Scrim", time: "Hôm qua", result: "Win" as const, sub: "ACS: 280" },
-    ],
-    dailyMatches: [
-      { id: 1, avatar: "🐉", name: "Hà_Smoke", desc: "Platinum 3 · Controller", score: 92 },
-      { id: 2, avatar: "🐺", name: "ĐứcJG", desc: "Diamond 4 · Initiator", score: 85 },
-    ],
-    pendingComms: { avatar: "🌸", name: "TrangKill", msg: "Scrim Val tối nay không?" },
+    id: profile.id,
+    game: toGameSlug(profile.game),
+    rankTier: profile.rankTier,
+    rankLevel: profile.rankLevel,
+    role: profile.role,
+    schedule: profile.schedule,
+    goals: profile.goals,
+    communicationStyles: profile.communicationStyles,
+    playModes: profile.playModes,
+    voiceChat: profile.voiceChat,
+    lossReaction: profile.lossReaction,
+    mains: profile.mains,
+    recentChampion: profile.recentChampion,
+    verificationStatus: profile.verificationStatus,
+    riotId: isRiotLinked(profile) ? profile.riotId : null,
+    bio: profile.bio,
+    lookingStatus: profile.lookingStatus,
   };
 }
 
 @Injectable()
 export class ProfilesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private matching: MatchingService,
+    private riot: RiotService,
+  ) {}
 
   async saveOnboarding(userId: string, dto: OnboardingDto) {
-    const gameId = GAME_MAP[dto.game];
-    if (!gameId) {
+    const game = GAME_MAP[dto.game];
+    if (!game) {
       throw new NotFoundException(`Unknown game: ${dto.game}`);
     }
 
-    const profile = await this.prisma.playerProfile.upsert({
-      where: { userId },
-      update: {
-        game: gameId,
-        rankTier: dto.rankTier,
-        rankLevel: dto.rankLevel ?? null,
-        role: dto.role,
-        schedule: dto.schedule,
-        goals: dto.goals,
-        communicationStyles: dto.communicationStyles,
-        riotId: dto.riotId ?? null,
-        onboardingComplete: true,
-      },
-      create: {
-        userId,
-        game: gameId,
-        rankTier: dto.rankTier,
-        rankLevel: dto.rankLevel ?? null,
-        role: dto.role,
-        schedule: dto.schedule,
-        goals: dto.goals,
-        communicationStyles: dto.communicationStyles,
-        riotId: dto.riotId ?? null,
-        onboardingComplete: true,
-      },
-    });
+    const playModes = resolvePlayModes(dto.game, dto.playModes);
+    const aramOnly = isAramOnly(playModes);
+    const data = {
+      playModes,
+      rankTier: aramOnly ? UNRANKED_TIER : (dto.rankTier ?? UNRANKED_TIER),
+      rankLevel: aramOnly ? null : (dto.rankLevel ?? null),
+      role: aramOnly ? FILL_ROLE : (findRoleOption(dto.game, dto.role ?? "")?.label ?? dto.role ?? FILL_ROLE),
+      schedule: dto.schedule,
+      goals: dto.goals,
+      communicationStyles: dto.communicationStyles,
+      riotId: dto.riotId ?? null,
+      onboardingComplete: true,
+    };
+    const existing = await this.prisma.playerProfile.findUnique({ where: { userId_game: { userId, game } } });
+    if (existing && existing.riotId !== data.riotId) await this.riot.resetVerification(existing.id);
+    const answers = dto.questionnaire ? questionnaireUpdate(dto.questionnaire) : null;
+    const profileData = { ...data, ...answers?.profile };
+    const [profile] = await this.prisma.$transaction([
+      this.prisma.playerProfile.upsert({
+        where: { userId_game: { userId, game } },
+        update: profileData,
+        create: { userId, game, ...profileData },
+      }),
+      ...(answers ? [this.prisma.user.update({ where: { id: userId }, data: answers.user })] : []),
+    ]);
 
     return { profile };
   }
 
-  async getMyProfile(userId: string) {
+  async getMyProfile(userId: string, game: GameId | undefined) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        profile: true,
-        teamMemberships: {
-          include: {
-            team: {
-              include: {
-                _count: { select: { members: true } },
-              },
-            },
-          },
-        },
-        captainedTeams: {
-          include: {
-            _count: { select: { members: true } },
-          },
-        },
+        profiles: { orderBy: { createdAt: "asc" } },
+        teamMemberships: { include: { team: { include: { _count: { select: { members: true } } } } } },
+        captainedTeams: { include: { _count: { select: { members: true } } } },
       },
     });
 
@@ -230,220 +136,271 @@ export class ProfilesService {
       throw new NotFoundException("User not found");
     }
 
-    const profileView = user.profile
-      ? {
-          displayName: user.displayName,
-          email: user.email,
-          university: user.email.endsWith("@fpt.edu.vn") ? "FPT U" : "FPT EsportHub",
-          avatarEmoji: "🦊",
-          gameLabel: user.profile.game === "VALORANT" ? "Valorant" : "League of Legends",
-          gameTheme: user.profile.game === "VALORANT" ? "valorant" : "lol",
-          rankLabel: formatRank(user.profile.rankTier, user.profile.rankLevel),
-          roleLabel: user.profile.role,
-          riotId: user.profile.riotId,
-          bio: user.profile.bio ?? "Duelist chính hiệu, thích scrim nghiêm túc nhưng vẫn vui vẻ, không toxic.",
-          lookingForTeam: user.profile.lookingStatus === "open_to_match",
-          verificationLabel: user.profile.verificationStatus === "VERIFIED" ? "Verified" : user.profile.riotId ? "Pending" : "Self-reported",
-          reputationLabel: user.profile.reputationBadge === "TRUSTED" ? "Trusted" : user.profile.reputationBadge === "VERIFIED" ? "Verified" : user.profile.reputationBadge === "CAUTION" ? "Caution" : "New",
-          emailVerified: user.email.endsWith("@fpt.edu.vn"),
-          goals: user.profile.goals,
-          communicationStyles: user.profile.communicationStyles,
-          availability: user.profile.schedule.map((item, index) => ({
-            label: item,
-            detail: index === 0 ? "Khung giờ chính" : "Khung giờ phụ",
-            tag: index === 0 ? "Stable" : "Flexible",
-          })),
-          readiness: buildReadiness(user.profile),
-          gameConnections: buildGameConnections(user.profile),
-          teams: [
-            ...user.teamMemberships.map((membership) => ({
-              id: membership.team.id,
-              name: membership.team.name,
-              tag: membership.team.name.slice(0, 3).toUpperCase(),
-              gameLabel: membership.team.game === "VALORANT" ? "Valorant" : "League of Legends",
-              role: membership.role === "captain" ? "Captain" : "Member",
-              memberCount: membership.team._count.members,
-              neededRoles: membership.team.neededRoles,
-            })),
-            ...user.captainedTeams
-              .filter((team) => !user.teamMemberships.some((membership) => membership.team.id === team.id))
-              .map((team) => ({
-                id: team.id,
-                name: team.name,
-                tag: team.name.slice(0, 3).toUpperCase(),
-                gameLabel: team.game === "VALORANT" ? "Valorant" : "League of Legends",
-                role: "Captain",
-                memberCount: team._count.members,
-                neededRoles: team.neededRoles,
-              })),
-          ],
-        }
-      : null;
+    const profile = (game ? user.profiles.find((item) => item.game === game) : user.profiles[0]) ?? null;
+    const teams = [
+      ...user.teamMemberships.map((membership) => ({ team: membership.team, role: membership.role === "captain" ? "captain" : "member" })),
+      ...user.captainedTeams
+        .filter((team) => !user.teamMemberships.some((membership) => membership.team.id === team.id))
+        .map((team) => ({ team, role: "captain" })),
+    ].map(({ team, role }) => ({
+      id: team.id,
+      name: team.name,
+      game: toGameSlug(team.game),
+      role,
+      memberCount: team._count.members,
+      neededRoles: team.neededRoles,
+      recruitmentOpen: team.recruitmentOpen,
+    }));
+
+    const profileView = { teams, readiness: profile ? buildReadiness(profile) : null };
+    const achievements = await listAchievements(this.prisma, { userId });
 
     return {
       user: {
         id: user.id,
         email: user.email,
         displayName: user.displayName,
+        avatarKey: user.avatarKey,
+        coverKey: user.coverKey,
+        cosmetics: toCosmeticsView(user),
         role: user.role,
         status: user.status,
+        reputationBadge: user.reputationBadge,
+        ageRange: user.ageRange,
+        campus: user.campus,
         createdAt: user.createdAt,
       },
-      profile: user.profile,
+      profiles: user.profiles,
+      profile,
       profileView,
+      achievements,
     };
   }
 
-  async getDashboard(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { profile: true },
-    });
+  async getDashboard(userId: string, game: GameId | undefined) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException("User not found");
 
-    const [pendingReqs, unreadMessages] = await Promise.all([
-      this.prisma.matchRequest.count({
-        where: {
-          status: "PENDING",
-          OR: [{ senderId: userId }, { receiverId: userId }],
-        },
-      }),
-      this.prisma.message.count({
-        where: {
-          senderId: { not: userId },
-          conversation: { participants: { some: { id: userId } } },
-        },
+    const incoming = {
+      status: "PENDING" as const,
+      OR: [{ receiverId: userId }, { type: "PLAYER_TO_TEAM" as const, team: { captainId: userId } }],
+    };
+    const profile = await findActiveProfile(this.prisma, userId, game);
+    const [pendingIncoming, pendingSent, unreadMessages, latestRequest] = await Promise.all([
+      this.prisma.matchRequest.count({ where: incoming }),
+      this.prisma.matchRequest.count({ where: { status: "PENDING", senderId: userId } }),
+      this.countUnreadMessages(userId),
+      this.prisma.matchRequest.findFirst({
+        where: incoming,
+        include: { sender: { select: { id: true, displayName: true } }, team: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
       }),
     ]);
 
-    const lol = dashboardDefaults("lol");
-    const val = dashboardDefaults("val");
-    if (user.profile) {
-      const current = user.profile.game === "VALORANT" ? val : lol;
-      current.bio = user.profile.bio ?? current.bio;
-      current.rank = formatRank(user.profile.rankTier, user.profile.rankLevel);
-      current.role = user.profile.role;
-      current.commStyle = user.profile.communicationStyles[0] ?? current.commStyle;
-      current.goal = user.profile.goals[0] ?? current.goal;
-      current.pendingReqs = pendingReqs;
-      current.readiness = buildReadiness(user.profile).percent;
-    }
-
-    lol.pendingReqs = user.profile?.game === "LEAGUE_OF_LEGENDS" ? pendingReqs : lol.pendingReqs ?? 2;
-    val.pendingReqs = user.profile?.game === "VALORANT" ? pendingReqs : val.pendingReqs ?? 1;
+    const dailyMatches = profile?.onboardingComplete
+      ? (await this.matching.findMatches(userId, "find_players", profile.game, primaryPlayMode(profile))).matches.flatMap((match) => (match.type === "player" ? [match] : [])).slice(0, 3)
+      : [];
 
     return {
       displayName: user.displayName,
-      avatarEmoji: "🦊",
-      activeGame: user.profile?.game === "VALORANT" ? "val" : "lol",
-      unreadMessages,
-      profiles: { lol, val },
+      reputationBadge: user.reputationBadge,
+      game: profile ? toGameSlug(profile.game) : null,
+      playMode: profile ? primaryPlayMode(profile) : null,
+      profile: profile
+        ? {
+            rank: formatRank(profile.rankTier, profile.rankLevel),
+            role: profile.role,
+            bio: profile.bio,
+            goals: profile.goals,
+            communicationStyles: profile.communicationStyles,
+            playModes: profile.playModes,
+            riotId: profile.riotId,
+            verificationStatus: profile.verificationStatus,
+            lookingStatus: profile.lookingStatus,
+          }
+        : null,
+      readiness: profile ? buildReadiness(profile) : null,
+      counts: { pendingIncoming, pendingSent, unreadMessages },
+      latestRequest: latestRequest
+        ? {
+            id: latestRequest.id,
+            fromId: latestRequest.sender.id,
+            fromName: latestRequest.sender.displayName,
+            teamName: latestRequest.team?.name ?? null,
+            message: latestRequest.message,
+            createdAt: latestRequest.createdAt,
+          }
+        : null,
+      dailyMatches: dailyMatches.map((match) => ({
+        id: match.id,
+        displayName: match.displayName,
+        avatarKey: match.avatarKey,
+        rank: formatRank(match.rankTier, match.rankLevel),
+        role: match.role,
+        playModes: match.playModes,
+        reputationBadge: match.reputationBadge,
+        score: match.score,
+        reasons: match.reasons,
+      })),
     };
   }
 
-  async updateMyProfile(userId: string, dto: UpdateProfileDto) {
-    const profile = await this.prisma.playerProfile.findUnique({
-      where: { userId },
-    });
+  async getCounts(userId: string) {
+    const [pendingRequests, unreadMessages] = await Promise.all([
+      this.prisma.matchRequest.count({
+        where: { status: "PENDING", OR: [{ receiverId: userId }, { type: "PLAYER_TO_TEAM", team: { captainId: userId } }] },
+      }),
+      this.countUnreadMessages(userId),
+    ]);
+    return { pendingRequests, unreadMessages };
+  }
 
+  private async countUnreadMessages(userId: string) {
+    const memberships = await this.prisma.conversationParticipant.findMany({
+      where: { userId, conversation: { channelId: null } },
+      select: { conversationId: true, lastReadAt: true },
+    });
+    const counts = await Promise.all(
+      memberships.map((membership) =>
+        this.prisma.message.count({
+          where: {
+            conversationId: membership.conversationId,
+            senderId: { not: userId },
+            ...(membership.lastReadAt ? { createdAt: { gt: membership.lastReadAt } } : {}),
+          },
+        }),
+      ),
+    );
+    return counts.reduce((sum, count) => sum + count, 0);
+  }
+
+  async updateMyProfile(userId: string, dto: UpdateProfileDto) {
+    const game = dto.game ? GAME_MAP[dto.game] : undefined;
+    const profile = await findActiveProfile(this.prisma, userId, game);
     if (!profile) {
-      throw new NotFoundException(
-        "Profile not found. Complete onboarding first.",
-      );
+      throw new NotFoundException("Profile not found. Complete onboarding first.");
     }
+    const playModes = dto.playModes && resolvePlayModes(toGameSlug(profile.game), dto.playModes);
+    if (!isAramOnly(playModes)) assertValidRankAndRole(profile, dto);
 
     if (dto.displayName !== undefined) {
       await this.prisma.user.update({
         where: { id: userId },
-        data: { displayName: dto.displayName },
+        data: { displayName: dto.displayName.trim() },
       });
     }
 
-    const profileData: Record<string, unknown> = {};
-    if (dto.bio !== undefined) profileData.bio = dto.bio;
-    if (dto.game !== undefined) {
-      const gameId = GAME_MAP[dto.game];
-      if (!gameId) throw new NotFoundException(`Unknown game: ${dto.game}`);
-      profileData.game = gameId;
-    }
-    if (dto.rankTier !== undefined) profileData.rankTier = dto.rankTier;
-    if (dto.rankLevel !== undefined) profileData.rankLevel = dto.rankLevel;
-    if (dto.role !== undefined) profileData.role = dto.role;
-    if (dto.schedule !== undefined) profileData.schedule = dto.schedule;
-    if (dto.goals !== undefined) profileData.goals = dto.goals;
-    if (dto.communicationStyles !== undefined)
-      profileData.communicationStyles = dto.communicationStyles;
-    if (dto.lookingStatus !== undefined)
-      profileData.lookingStatus = dto.lookingStatus;
-    if (dto.riotId !== undefined) profileData.riotId = dto.riotId;
+    const nextRiotId = dto.riotId === undefined ? profile.riotId : dto.riotId?.trim() || null;
+    if (nextRiotId !== profile.riotId) await this.riot.resetVerification(profile.id);
 
     const updated = await this.prisma.playerProfile.update({
-      where: { userId },
-      data: profileData,
+      where: { id: profile.id },
+      data: { ...buildProfileUpdate(profile, dto), ...(playModes ? playModeUpdate(playModes) : {}) },
     });
 
     return { profile: updated };
   }
 
-  async verifyRiotId(userId: string) {
-    const profile = await this.prisma.playerProfile.findUnique({ where: { userId } });
-    if (!profile) throw new NotFoundException("Profile not found. Complete onboarding first.");
-    if (!profile.riotId || !profile.riotId.includes("#")) {
-      throw new BadRequestException("Set Riot ID as GameName#TagLine before verification.");
-    }
-
-    const apiKey = process.env.RIOT_API_KEY;
-    if (!apiKey) {
-      throw new ServiceUnavailableException("RIOT_API_KEY is not configured.");
-    }
-
-    const [gameName, tagLine] = profile.riotId.split("#");
-    const url = `https://asia.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
-    const response = await fetch(url, { headers: { "X-Riot-Token": apiKey } });
-    if (!response.ok) {
-      throw new BadRequestException(`Riot ID verification failed with status ${response.status}.`);
-    }
-
-    const account = await response.json() as { puuid: string; gameName: string; tagLine: string };
-    const updated = await this.prisma.playerProfile.update({
-      where: { userId },
-      data: { verificationStatus: "VERIFIED", riotId: `${account.gameName}#${account.tagLine}` },
-    });
-
-    return {
-      profile: updated,
-      riotAccount: {
-        puuid: account.puuid,
-        gameName: account.gameName,
-        tagLine: account.tagLine,
-      },
-      note: "LoL can continue with Summoner/Rank endpoints. Valorant personal stats require RSO opt-in and production access.",
-    };
-  }
-
   async getPublicProfile(viewerId: string, targetUserId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: targetUserId },
-      include: { profile: true },
-    });
+    const [user, block, achievements] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: targetUserId },
+        include: { profiles: { where: { onboardingComplete: true }, orderBy: { createdAt: "asc" } } },
+      }),
+      this.prisma.block.findFirst({
+        where: {
+          OR: [
+            { blockerId: viewerId, blockedId: targetUserId },
+            { blockerId: targetUserId, blockedId: viewerId },
+          ],
+        },
+        select: { id: true },
+      }),
+      listAchievements(this.prisma, { userId: targetUserId }),
+    ]);
 
-    if (!user) {
-      throw new NotFoundException("User not found");
-    }
-
-    if (!user.profile) {
-      throw new NotFoundException("Profile not found");
+    if (!user || block || user.status === "BANNED" || user.profiles.length === 0) {
+      throw new NotFoundException("Player not found");
     }
 
     return {
       user: {
         id: user.id,
         displayName: user.displayName,
-        role: user.role,
-        status: user.status,
+        avatarKey: user.avatarKey,
+        coverKey: user.coverKey,
+        cosmetics: toCosmeticsView(user),
+        reputationBadge: user.reputationBadge,
+        campus: user.campus,
         createdAt: user.createdAt,
       },
-      profile: user.profile,
+      profiles: user.profiles.map(toPublicGameProfile),
+      achievements,
     };
   }
+}
+
+/** Replaces all questionnaire answers; answered at all = `questionnaireAt` set, all cleared = null. */
+function questionnaireUpdate(answers: QuestionnaireDto) {
+  const mains = answers.mains ?? [];
+  const answered = Boolean(answers.voiceChat || answers.lossReaction || answers.ageRange || answers.campus || mains.length);
+  return {
+    profile: {
+      voiceChat: answers.voiceChat ?? null,
+      lossReaction: answers.lossReaction ?? null,
+      mains,
+      questionnaireAt: answered ? new Date() : null,
+    },
+    user: { ageRange: answers.ageRange ?? null, campus: answers.campus ?? null },
+  };
+}
+
+/** Role lookup by id or label, case-insensitive. Roles are stored by label (as in seed data). */
+function findRoleOption(gameSlug: string, value: string) {
+  const needle = value.trim().toLowerCase();
+  return gameRoles[gameSlug]?.find((role) => role.id === needle || role.label.toLowerCase() === needle);
+}
+
+/** Rank and role must exist in the lookup list for the profile's game. */
+function assertValidRankAndRole(profile: PlayerProfile, dto: UpdateProfileDto) {
+  const slug = toGameSlug(profile.game);
+  if (dto.rankTier !== undefined) {
+    const level = dto.rankLevel === undefined ? profile.rankLevel : dto.rankLevel;
+    const known = gameRanks[slug].some((rank) => rank.tier === dto.rankTier && rank.level === (level ?? null));
+    if (!known) throw new BadRequestException("Unknown rank for this game.");
+  }
+  if (dto.role !== undefined && !findRoleOption(slug, dto.role)) {
+    throw new BadRequestException("Unknown role for this game.");
+  }
+}
+
+/** New play modes; switching to ARAM-only stores Unranked / Fill (rank and role don't apply to ARAM). */
+function playModeUpdate(playModes: string[]) {
+  return isAramOnly(playModes) ? { playModes, rankTier: UNRANKED_TIER, rankLevel: null, role: FILL_ROLE } : { playModes };
+}
+
+type ProfileUpdate = Partial<
+  Pick<
+    PlayerProfile,
+    "bio" | "rankTier" | "rankLevel" | "role" | "schedule" | "goals" | "communicationStyles" | "lookingStatus" | "riotId" | "verificationStatus"
+  >
+>;
+
+function buildProfileUpdate(profile: PlayerProfile, dto: UpdateProfileDto): ProfileUpdate {
+  const data: ProfileUpdate = {};
+  if (dto.bio !== undefined) data.bio = dto.bio.trim() || null;
+  if (dto.rankTier !== undefined) data.rankTier = dto.rankTier;
+  if (dto.rankLevel !== undefined) data.rankLevel = dto.rankLevel;
+  if (dto.role !== undefined) data.role = findRoleOption(toGameSlug(profile.game), dto.role)?.label ?? dto.role;
+  if (dto.schedule !== undefined) data.schedule = dto.schedule;
+  if (dto.goals !== undefined) data.goals = dto.goals;
+  if (dto.communicationStyles !== undefined) data.communicationStyles = dto.communicationStyles;
+  if (dto.lookingStatus !== undefined) data.lookingStatus = dto.lookingStatus;
+  if (dto.riotId !== undefined) {
+    const riotId = dto.riotId?.trim() || null;
+    data.riotId = riotId;
+    // A changed Riot ID has not been verified yet.
+    if (riotId !== profile.riotId) data.verificationStatus = riotId ? "SELF_REPORTED" : "UNVERIFIED";
+  }
+  return data;
 }

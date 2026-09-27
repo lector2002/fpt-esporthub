@@ -1,0 +1,121 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: "Archivo", "Archivo Fallback", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Archivo", "Archivo Fallback", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+    --color-coin: var(--coin);
+    --color-lol: var(--lol);
+    --color-valorant: var(--valorant);
+    --color-success: var(--success);
+    --color-warning: var(--warning);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    /* Volt: graphite surfaces, 1px hairlines, lime only for primary actions, active nav and key numbers. */
+    color-scheme: dark;
+    --radius: 0.625rem;
+    --background: #0e0f0c;
+    --foreground: #f2f4ee;
+    --card: #17181a;
+    --card-foreground: #f2f4ee;
+    --popover: #1f2123;
+    --popover-foreground: #f2f4ee;
+    --primary: #c8f135;
+    --primary-foreground: #0e0f0c;
+    --secondary: #1f2123;
+    --secondary-foreground: #f2f4ee;
+    --muted: #1f2123;
+    --muted-foreground: #8c9088;
+    --accent: #232528;
+    --accent-foreground: #f2f4ee;
+    --destructive: #f2555a;
+    --border: #26282b;
+    --input: #303236;
+    --ring: #c8f135;
+    --chart-1: #c8f135;
+    --chart-2: #4fd1c5;
+    --chart-3: #4ade80;
+    --chart-4: #f5c84c;
+    --chart-5: #a78bfa;
+    --sidebar: #121311;
+    --sidebar-foreground: #d9dcd4;
+    --sidebar-primary: #c8f135;
+    --sidebar-primary-foreground: #0e0f0c;
+    --sidebar-accent: #1f2123;
+    --sidebar-accent-foreground: #f2f4ee;
+    --sidebar-border: #26282b;
+    --sidebar-ring: #c8f135;
+    --coin: #f5c84c;
+    --lol: oklch(0.8 0.12 85);
+    --valorant: oklch(0.68 0.21 22);
+    --success: #4ade80;
+    --warning: #f5b84c;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  html {
+    @apply font-sans;
+    }
+  /* Archivo's width axis: wider headings and big numbers are the Volt signature. */
+  h1, h2, h3, [data-slot="card-title"] {
+    font-stretch: 112%;
+    }
+}
+/* Buttons sitting on a picture get a solid fill so they stay readable. Unlayered on purpose: it must beat the variant utilities. */
+.on-picture [data-slot="button"]:is([data-variant="outline"], [data-variant="ghost"], [data-variant="secondary"]) {
+  background-color: var(--card);
+  border-color: color-mix(in oklab, var(--foreground) 18%, transparent);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+}
+.on-picture [data-slot="button"]:is([data-variant="outline"], [data-variant="ghost"], [data-variant="secondary"]):hover {
+  background-color: var(--muted);
+}

@@ -1,4 +1,4 @@
-import { IsInt, IsString, Max, Min } from "class-validator";
+import { IsInt, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreateFeedbackDto {
   @IsInt()
@@ -7,5 +7,7 @@ export class CreateFeedbackDto {
   rating!: number;
 
   @IsString()
+  @MinLength(10)
+  @MaxLength(500)
   comment!: string;
 }

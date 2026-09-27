@@ -20,6 +20,14 @@ export const communicationStyles = [
   { id: "beginner_friendly", label: "Beginner friendly" },
 ] as const;
 
+export const scheduleSlots = [
+  { id: "weekday_morning", label: "Weekday mornings" },
+  { id: "weekday_afternoon", label: "Weekday afternoons" },
+  { id: "weekday_evening", label: "Weekday evenings" },
+  { id: "weekend", label: "Weekends" },
+  { id: "late_night", label: "Late night" },
+] as const;
+
 const valorantRanks = [
   { tier: "Iron", level: 1, label: "Iron 1", sort: 1 },
   { tier: "Iron", level: 2, label: "Iron 2", sort: 2 },
@@ -48,7 +56,12 @@ const valorantRanks = [
   { tier: "Radiant", level: null, label: "Radiant", sort: 25 },
 ] as const;
 
+/** Off the ladder (sort 0). Matching treats it as its own category, never as "close" to Iron. */
+export const UNRANKED_TIER = "Unranked";
+export const FILL_ROLE = "Fill";
+
 const lolRanks = [
+  { tier: UNRANKED_TIER, level: null, label: "Unranked", sort: 0 },
   { tier: "Iron", level: 4, label: "Iron IV", sort: 1 },
   { tier: "Iron", level: 3, label: "Iron III", sort: 2 },
   { tier: "Iron", level: 2, label: "Iron II", sort: 3 },
@@ -100,5 +113,30 @@ export const gameRoles: Record<string, ReadonlyArray<{ id: string; label: string
     { id: "mid", label: "Mid" },
     { id: "adc", label: "ADC" },
     { id: "support", label: "Support" },
+    { id: "fill", label: FILL_ROLE },
   ],
 };
+
+/** LoL only: "ranked" (Summoner's Rift ladder) and "aram". Valorant is always ranked. */
+export const playModes = [
+  { id: "ranked", label: "Ranked" },
+  { id: "aram", label: "ARAM" },
+] as const;
+
+export type PlayMode = (typeof playModes)[number]["id"];
+export const PLAY_MODE_IDS: PlayMode[] = playModes.map((mode) => mode.id);
+export const DEFAULT_PLAY_MODES: PlayMode[] = ["ranked"];
+
+export const gamePlayModes: Record<string, ReadonlyArray<{ id: PlayMode; label: string }>> = {
+  valorant: playModes.filter((mode) => mode.id === "ranked"),
+  league_of_legends: playModes,
+};
+
+/** Only LoL has ARAM; any other game is forced to ranked. */
+export function supportsAram(gameSlug: string) {
+  return gameSlug === "league_of_legends";
+}
+
+export function isAramOnly(modes: readonly string[] | undefined) {
+  return Boolean(modes && modes.length > 0 && !modes.includes("ranked"));
+}

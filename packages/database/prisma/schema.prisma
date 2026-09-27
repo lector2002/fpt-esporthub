@@ -41,6 +41,7 @@ enum VerificationStatus {
   UNVERIFIED
   SELF_REPORTED
   PENDING
+  LINKED
   VERIFIED
   API_FAILED
   SUSPENDED
@@ -69,52 +70,146 @@ enum CoachingRequestStatus {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  passwordHash String?
-  displayName  String
-  role         UserRole   @default(USER)
-  status       UserStatus @default(ACTIVE)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id              String          @id @default(cuid())
+  email           String          @unique
+  passwordHash    String?
+  displayName     String
+  role            UserRole        @default(USER)
+  status          UserStatus      @default(ACTIVE)
+  reputationBadge ReputationBadge @default(NEW)
+  /// Questionnaire. Age range is used for matching only and never shown to other users.
+  ageRange        String?
+  campus          String?
+  /// Uploaded avatar (apps/api media storage key), null = initials.
+  avatarKey       String?
+  /// Uploaded card cover (media storage key), shown as the banner on player and coach cards and the profile.
+  coverKey        String?
+  /// Spendable app credits (1 credit = 1,000 VND). Only CreditsService changes it, always with a CreditTransaction.
+  creditBalance   Int             @default(0)
+  /// Equipped cosmetics (catalog ids in apps/api cosmetics/catalog.ts); only owned items can be equipped.
+  frameId         String?
+  bannerId        String?
+  nameColorId     String?
+  titleId         String?
+  /// Build guides premium pass end; null or past = free tier only.
+  premiumUntil    DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  profile              PlayerProfile?
-  teamMemberships      TeamMember[]
-  captainedTeams       Team[]                  @relation("TeamCaptain")
-  sentRequests         MatchRequest[]          @relation("RequestSender")
-  receivedRequests     MatchRequest[]          @relation("RequestReceiver")
-  conversationMembers  ConversationParticipant[]
-  messages             Message[]
-  reportsFiled         Report[]                @relation("Reporter")
-  reportsReceived      Report[]                @relation("ReportedUser")
-  blocksMade           Block[]                 @relation("Blocker")
-  blocksReceived       Block[]                 @relation("Blocked")
-  reputationRecords    ReputationRecord[]
-  eventInterests       TournamentEventInterest[]
-  passwordResetTokens  PasswordResetToken[]
-  coachProfile         CoachProfile?
-  coachingRequestsSent CoachingRequest[] @relation("CoachingPlayer")
-  coachingRequestsReceived CoachingRequest[] @relation("CoachingCoach")
-  coachFeedbacks       CoachFeedback[]   @relation("CoachFeedbackPlayer")
+  profiles                 PlayerProfile[]
+  teamMemberships          TeamMember[]
+  captainedTeams           Team[]                    @relation("TeamCaptain")
+  sentRequests             MatchRequest[]            @relation("RequestSender")
+  receivedRequests         MatchRequest[]            @relation("RequestReceiver")
+  conversationMembers      ConversationParticipant[]
+  messages                 Message[]
+  reportsFiled             Report[]                  @relation("Reporter")
+  reportsReceived          Report[]                  @relation("ReportedUser")
+  blocksMade               Block[]                   @relation("Blocker")
+  blocksReceived           Block[]                   @relation("Blocked")
+  reputationRecords        ReputationRecord[]
+  eventInterests           TournamentEventInterest[]
+  passwordResetTokens      PasswordResetToken[]
+  coachProfile             CoachProfile?
+  coachingRequestsSent     CoachingRequest[]         @relation("CoachingPlayer")
+  coachingRequestsReceived CoachingRequest[]         @relation("CoachingCoach")
+  coachFeedbacks           CoachFeedback[]           @relation("CoachFeedbackPlayer")
+  venue                    Venue?                    @relation("VenueOwner")
+  captainedEntries         TournamentEntry[]         @relation("EntryCaptain")
+  tournamentSlots          TournamentEntryPlayer[]
+  achievements             Achievement[]
+  creditTransactions       CreditTransaction[]
+  creditTopUps             CreditTopUp[]
+  cosmetics                UserCosmetic[]
+  ownedCommunities         Community[]               @relation("CommunityOwner")
+  communityMemberships     CommunityMember[]
 }
 
-model CoachProfile {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  game         GameId
-  specialties  String[]
-  hourlyRate   Int
-  bio          String
-  availability String[]
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+enum CreditTxKind {
+  TOPUP
+  BOOST
+  FEATURE
+  COSMETIC
+  GUIDE
+  COACHING_HOLD
+  COACHING_REFUND
+  ADJUSTMENT
+}
 
-  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  requests CoachingRequest[]
-  feedbacks CoachFeedback[]
+/// Append-only credit ledger. `ref` makes every movement idempotent (a replayed webhook credits once).
+model CreditTransaction {
+  id           String       @id @default(cuid())
+  userId       String
+  /// Signed: positive = credits in, negative = spent or held.
+  amount       Int
+  balanceAfter Int
+  kind         CreditTxKind
+  ref          String       @unique
+  note         String?
+  createdAt    DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+enum TopUpStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+/// One checkout. `orderCode` is the provider's order number: a DB sequence, so it is unique and never reused.
+model CreditTopUp {
+  id            String      @id @default(cuid())
+  orderCode     Int         @unique @default(autoincrement())
+  userId        String
+  credits       Int
+  amountVnd     Int
+  status        TopUpStatus @default(PENDING)
+  provider      String
+  checkoutUrl   String?
+  paymentLinkId String?
+  createdAt     DateTime    @default(now())
+  paidAt        DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+enum CoachReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Listed publicly only after an admin approves it; a rejected listing goes back to PENDING when edited.
+model CoachProfile {
+  id             String            @id @default(cuid())
+  userId         String            @unique
+  game           GameId
+  specialties    String[]
+  hourlyRate     Int
+  bio            String
+  availability   String[]
+  active         Boolean           @default(true)
+  reviewStatus   CoachReviewStatus @default(PENDING)
+  reviewNote     String?
+  reviewedAt     DateTime?
+  /// Credits earned from sessions and not yet paid out by an admin. Not spendable.
+  payableCredits Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requests     CoachingRequest[]
+  payouts      CoachPayoutEntry[]
+  feedbacks    CoachFeedback[]
+  achievements Achievement[]
 
   @@index([game, active])
+  @@index([reviewStatus])
 }
 
 model CoachFeedback {
@@ -132,17 +227,21 @@ model CoachFeedback {
 }
 
 model CoachingRequest {
-  id                String               @id @default(cuid())
-  coachId           String
-  playerId          String
-  proposedStartAt   DateTime
-  durationMinutes   Int
-  proposedPrice     Int
-  message           String
-  status            CoachingRequestStatus @default(PENDING)
-  lastProposedById  String
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  id               String                @id @default(cuid())
+  coachId          String
+  playerId         String
+  proposedStartAt  DateTime
+  durationMinutes  Int
+  proposedPrice    Int
+  message          String
+  status           CoachingRequestStatus @default(PENDING)
+  lastProposedById String
+  /// CREDITS_COACHING only: credits taken from the player when the session was agreed.
+  creditHold       Int?
+  settlement       CoachingSettlement?
+  settledAt        DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   coach    CoachProfile @relation(fields: [coachId], references: [id], onDelete: Cascade)
   player   User         @relation("CoachingPlayer", fields: [playerId], references: [id], onDelete: Cascade)
@@ -150,6 +249,33 @@ model CoachingRequest {
 
   @@index([coachId, status])
   @@index([playerId, status])
+}
+
+enum CoachingSettlement {
+  HELD
+  RELEASED
+  REFUNDED
+  DISPUTED
+}
+
+enum CoachPayoutKind {
+  EARNING
+  PAYOUT
+}
+
+/// Coach side of paid sessions: earnings in, manual admin payouts out. Mirrors CoachProfile.payableCredits.
+model CoachPayoutEntry {
+  id             String          @id @default(cuid())
+  coachProfileId String
+  amount         Int
+  kind           CoachPayoutKind
+  ref            String          @unique
+  note           String?
+  createdAt      DateTime        @default(now())
+
+  coachProfile CoachProfile @relation(fields: [coachProfileId], references: [id])
+
+  @@index([coachProfileId, createdAt])
 }
 
 model PasswordResetToken {
@@ -166,46 +292,74 @@ model PasswordResetToken {
 }
 
 model PlayerProfile {
-  id                 String             @id @default(cuid())
-  userId             String             @unique
-  game               GameId
-  rankTier           String
-  rankLevel          Int?
-  role               String
-  schedule           String[]
-  goals              String[]
+  id                  String             @id @default(cuid())
+  userId              String
+  game                GameId
+  rankTier            String
+  rankLevel           Int?
+  role                String
+  schedule            String[]
+  goals               String[]
   communicationStyles String[]
-  riotId             String?
-  verificationStatus VerificationStatus @default(UNVERIFIED)
-  reputationBadge    ReputationBadge    @default(NEW)
-  bio                String?
-  lookingStatus      String             @default("open_to_match")
-  onboardingComplete Boolean            @default(false)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  riotId              String?
+  riotPuuid           String?
+  verifyIconId        Int?
+  verifyExpiresAt     DateTime?
+  verificationStatus  VerificationStatus @default(UNVERIFIED)
+  bio                 String?
+  lookingStatus       String             @default("open_to_match")
+  /// LoL only: "ranked" and/or "aram". Valorant profiles stay ["ranked"].
+  playModes           String[]           @default(["ranked"])
+  /// Questionnaire (per game); questionnaireAt is null until the player answers it.
+  voiceChat           String?
+  lossReaction        String?
+  mains               String[]           @default([])
+  /// Data Dragon id of the champion in the latest synced match; card art when no mains are set.
+  recentChampion      String?
+  questionnaireAt     DateTime?
+  /// Paid Find Match boost: ranked higher and badged until this time.
+  boostedUntil        DateTime?
+  onboardingComplete  Boolean            @default(false)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stats GameStats?
+
+  @@unique([userId, game])
+  @@index([game, onboardingComplete, lookingStatus])
 }
 
 model Team {
-  id                  String   @id @default(cuid())
-  captainId           String
-  name                String
-  game                GameId
-  rankMin             String
-  rankMax             String
-  neededRoles         String[]
-  schedule            String[]
-  goals               String[]
-  communicationStyle  String
-  description         String?
-  recruitmentOpen     Boolean  @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  captainId          String
+  name               String
+  game               GameId
+  /// LoL only: "ranked" or "aram". ARAM teams ignore rank range and needed roles.
+  mode               String    @default("ranked")
+  rankMin            String
+  rankMax            String
+  neededRoles        String[]
+  schedule           String[]
+  goals              String[]
+  communicationStyle String
+  description        String?
+  recruitmentOpen    Boolean   @default(true)
+  /// Uploaded logo (media storage key), null = initials.
+  logoKey            String?
+  /// Uploaded card cover (media storage key), shown as the banner on team cards and the team page.
+  coverKey           String?
+  /// Paid featured recruitment: listed first and badged until this time.
+  featuredUntil      DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  captain User         @relation("TeamCaptain", fields: [captainId], references: [id])
-  members TeamMember[]
-  requests MatchRequest[]
+  captain           User              @relation("TeamCaptain", fields: [captainId], references: [id])
+  members           TeamMember[]
+  requests          MatchRequest[]
+  tournamentEntries TournamentEntry[]
+  conversation      Conversation?
+  achievements      Achievement[]
 }
 
 model TeamMember {
@@ -222,15 +376,16 @@ model TeamMember {
 }
 
 model MatchRequest {
-  id          String             @id @default(cuid())
-  senderId    String
-  receiverId  String?
-  teamId      String?
-  type        MatchRequestType
-  status      MatchRequestStatus @default(PENDING)
-  message     String
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id         String             @id @default(cuid())
+  senderId   String
+  receiverId String?
+  teamId     String?
+  game       GameId?
+  type       MatchRequestType
+  status     MatchRequestStatus @default(PENDING)
+  message    String
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
 
   sender       User          @relation("RequestSender", fields: [senderId], references: [id])
   receiver     User?         @relation("RequestReceiver", fields: [receiverId], references: [id])
@@ -238,13 +393,19 @@ model MatchRequest {
   conversation Conversation?
 }
 
+/// Either a match-request thread (matchRequestId) or a team's room chat (teamId), never both.
 model Conversation {
   id             String   @id @default(cuid())
-  matchRequestId String   @unique
+  matchRequestId String?  @unique
+  teamId         String?  @unique
+  /// Community text channel chat; kept out of the inbox and unread counts.
+  channelId      String?  @unique
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  matchRequest MatchRequest @relation(fields: [matchRequestId], references: [id], onDelete: Cascade)
+  matchRequest MatchRequest?             @relation(fields: [matchRequestId], references: [id], onDelete: Cascade)
+  team         Team?                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  channel      CommunityChannel?         @relation(fields: [channelId], references: [id], onDelete: Cascade)
   participants ConversationParticipant[]
   messages     Message[]
 }
@@ -262,6 +423,60 @@ model ConversationParticipant {
   @@unique([conversationId, userId])
 }
 
+/// Discord-style server: text channels (a Conversation each) and join-anytime voice channels.
+model Community {
+  id          String   @id @default(cuid())
+  ownerId     String
+  name        String
+  description String?
+  /// Null = any game.
+  game        GameId?
+  /// Uploaded icon (media storage key), null = initials.
+  iconKey     String?
+  /// Uploaded banner (media storage key), null = game art.
+  coverKey    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner    User               @relation("CommunityOwner", fields: [ownerId], references: [id])
+  members  CommunityMember[]
+  channels CommunityChannel[]
+}
+
+model CommunityMember {
+  id          String   @id @default(cuid())
+  communityId String
+  userId      String
+  /// "owner" or "member".
+  role        String   @default("member")
+  createdAt   DateTime @default(now())
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, userId])
+  @@index([userId])
+}
+
+enum ChannelKind {
+  TEXT
+  VOICE
+}
+
+model CommunityChannel {
+  id          String      @id @default(cuid())
+  communityId String
+  name        String
+  kind        ChannelKind
+  position    Int         @default(0)
+  createdAt   DateTime    @default(now())
+
+  community    Community     @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  conversation Conversation?
+
+  @@index([communityId, position])
+}
+
 model Message {
   id             String   @id @default(cuid())
   conversationId String
@@ -274,15 +489,21 @@ model Message {
 }
 
 model TournamentEvent {
-  id          String   @id @default(cuid())
-  title       String
-  game        GameId
-  organizer   String
-  startsAt    DateTime
-  deadlineAt  DateTime
-  rules       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  title      String
+  game       GameId
+  organizer  String
+  startsAt   DateTime
+  deadlineAt DateTime
+  rules      String?
+  /// External sign-up page (http/https only).
+  registrationUrl String?
+  format          String?
+  prize           String?
+  /// Players per team, e.g. 5 for 5v5.
+  teamSize        Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   interests TournamentEventInterest[]
 }
@@ -336,4 +557,215 @@ model ReputationRecord {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Cached game stats pulled from the Riot API for one verified game profile.
+model GameStats {
+  id        String   @id @default(cuid())
+  profileId String   @unique
+  data      Json
+  syncedAt  DateTime
+
+  profile PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+enum VenueStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TournamentFormat {
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+}
+
+enum TournamentStatus {
+  REGISTRATION
+  CHECK_IN
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum BracketSide {
+  WINNERS
+  LOSERS
+  GRAND_FINAL
+}
+
+enum TournamentMatchStatus {
+  PENDING
+  READY
+  DISPUTED
+  DONE
+}
+
+/// Internet cafe that hosts offline tournaments. One per owner; an admin approves it before it can host.
+model Venue {
+  id         String      @id @default(cuid())
+  ownerId    String      @unique
+  name       String
+  address    String
+  city       String
+  pcCount    Int
+  phone      String?
+  status     VenueStatus @default(PENDING)
+  reviewNote String?
+  reviewedAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  owner       User         @relation("VenueOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  tournaments Tournament[]
+
+  @@index([status])
+}
+
+model Tournament {
+  id              String           @id @default(cuid())
+  venueId         String
+  title           String
+  game            GameId
+  format          TournamentFormat
+  teamSize        Int              @default(5)
+  maxTeams        Int
+  bestOf          Int              @default(1)
+  /// Final of single elimination, grand final of double elimination.
+  finalBestOf     Int              @default(3)
+  /// VND, collected at the counter; the app only tracks who paid.
+  entryFee        Int              @default(0)
+  prize           String?
+  rules           String?
+  startsAt        DateTime
+  status          TournamentStatus @default(REGISTRATION)
+  championEntryId String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  venue   Venue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  entries TournamentEntry[]
+  matches TournamentMatch[]
+
+  @@index([game, status, startsAt])
+}
+
+/// A registered team. Name and roster are snapshots: later team changes don't touch the tournament.
+model TournamentEntry {
+  id           String    @id @default(cuid())
+  tournamentId String
+  teamId       String?
+  teamName     String
+  captainId    String
+  seed         Int?
+  paidAt       DateTime?
+  checkedInAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  tournament Tournament              @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team       Team?                   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  captain    User                    @relation("EntryCaptain", fields: [captainId], references: [id], onDelete: Cascade)
+  players    TournamentEntryPlayer[]
+  matchesA   TournamentMatch[]       @relation("MatchEntryA")
+  matchesB   TournamentMatch[]       @relation("MatchEntryB")
+
+  @@unique([tournamentId, teamId])
+  @@index([tournamentId])
+}
+
+model TournamentEntryPlayer {
+  id          String    @id @default(cuid())
+  entryId     String
+  userId      String
+  /// Single-use code shown as a QR at the counter.
+  checkInCode String    @unique
+  checkedInAt DateTime?
+
+  entry TournamentEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, userId])
+}
+
+/// Planned by the bracket engine; results only follow the stored next/loser links.
+model TournamentMatch {
+  id            String                @id @default(cuid())
+  tournamentId  String
+  key           String
+  bracket       BracketSide
+  round         Int
+  position      Int
+  bestOf        Int
+  entryAId      String?
+  entryBId      String?
+  scoreA        Int?
+  scoreB        Int?
+  winnerEntryId String?
+  status        TournamentMatchStatus @default(PENDING)
+  /// Captain reports: { A?: { scoreA, scoreB }, B?: { scoreA, scoreB } }.
+  reports       Json?
+  nextMatchKey  String?
+  nextSlot      String?
+  loserMatchKey String?
+  loserSlot     String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  tournament Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  entryA     TournamentEntry? @relation("MatchEntryA", fields: [entryAId], references: [id], onDelete: SetNull)
+  entryB     TournamentEntry? @relation("MatchEntryB", fields: [entryBId], references: [id], onDelete: SetNull)
+
+  @@unique([tournamentId, key])
+}
+
+/// Show-off card (rank screenshot, trophy...). Belongs to exactly one of a player, a team or a coach listing.
+model Achievement {
+  id             String   @id @default(cuid())
+  userId         String?
+  teamId         String?
+  coachProfileId String?
+  title          String
+  /// Media storage key of the re-encoded picture.
+  imageKey       String
+  createdAt      DateTime @default(now())
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team         Team?         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  coachProfile CoachProfile? @relation(fields: [coachProfileId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([coachProfileId])
+}
+
+/// A cosmetic a user bought once with credits (catalog id, see apps/api cosmetics/catalog.ts).
+model UserCosmetic {
+  id        String   @id @default(cuid())
+  userId    String
+  itemId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId])
+}
+
+/// A LoL build guide for one champion and position, imported from a stats source. `data` holds GuideData (apps/api guides/guide-data.ts).
+model BuildGuide {
+  id        String   @id @default(cuid())
+  /// Data Dragon champion id, e.g. "Ahri".
+  champion  String
+  /// top | jungle | mid | adc | support
+  position  String
+  patch     String
+  source    String
+  sourceUrl String
+  winRate   Float?
+  pickRate  Float?
+  banRate   Float?
+  data      Json
+  fetchedAt DateTime
+
+  @@unique([champion, position, source])
+  @@index([position])
 }

@@ -9,8 +9,13 @@ test-results/
 !.env.example
 *.log
 *.tsbuildinfo
+apps/api/uploads/
 tmp/
 temp/
 
 .vercel
 .env*
+
+# Local scratch: screenshots, logs, throwaway env files for the local prod stack.
+output/
+.claude/settings.local.json

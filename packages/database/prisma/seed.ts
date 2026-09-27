@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const passwordHash = "$2b$10$E9jL/I8KCgGKzP.Jd3XL0eEHAT5zEkLuyyFWsp7rcprs3eY3/wF1a"; // Password123!
@@ -19,104 +19,32 @@ async function main() {
   const anhtu = await upsertUser("seed-user-anhtu", "anhtu@fpt.edu.vn", "AnhTuSupport");
   const linh = await upsertUser("seed-user-linh", "linh@fpt.edu.vn", "LinhMid");
 
-  await prisma.playerProfile.upsert({
-    where: { userId: minh.id },
-    update: {},
-    create: {
-      userId: minh.id,
-      game: "VALORANT",
-      rankTier: "Gold",
-      rankLevel: 2,
-      role: "Duelist",
-      schedule: ["weekday_evening", "weekend"],
-      goals: ["rank_climb", "find_team"],
-      communicationStyles: ["try_hard", "shotcaller"],
-      riotId: "MinhNguyen#VN2",
-      verificationStatus: "VERIFIED",
-      reputationBadge: "VERIFIED",
-      bio: "Sinh vien FPT, main Duelist, muon leo rank.",
-      onboardingComplete: true,
-    },
-  });
+  const profiles: Array<[string, "VALORANT" | "LEAGUE_OF_LEGENDS", Omit<Prisma.PlayerProfileUncheckedCreateInput, "userId" | "game">]> = [
+    [minh.id, "VALORANT", { rankTier: "Gold", rankLevel: 2, role: "Duelist", schedule: ["weekday_evening", "weekend"], goals: ["rank_climb", "find_team"], communicationStyles: ["try_hard", "shotcaller"], riotId: "MinhNguyen#VN2", verificationStatus: "SELF_REPORTED", bio: "Sinh vien FPT, main Duelist, muon leo rank.", onboardingComplete: true }],
+    [minh.id, "LEAGUE_OF_LEGENDS", { rankTier: "Silver", rankLevel: 1, role: "Jungle", schedule: ["weekend"], goals: ["casual_play", "find_team"], communicationStyles: ["chill", "shotcaller"], riotId: "MinhNguyen#VN2", verificationStatus: "SELF_REPORTED", bio: "Choi Jungle cuoi tuan cho vui.", voiceChat: "sometimes", lossReaction: "calm", mains: ["LeeSin", "Viego"], questionnaireAt: new Date("2026-09-20T12:00:00Z"), onboardingComplete: true }],
+    [khoa.id, "VALORANT", { rankTier: "Diamond", rankLevel: 1, role: "Sentinel", schedule: ["weekday_evening", "weekend"], goals: ["rank_climb", "scrim_practice"], communicationStyles: ["try_hard", "shotcaller"], riotId: "Khoa#1011", verificationStatus: "SELF_REPORTED", bio: "Sentinel, call tot, dang tuyen team nghiem tuc.", onboardingComplete: true }],
+    [hieu.id, "VALORANT", { rankTier: "Silver", rankLevel: 3, role: "Initiator", schedule: ["weekday_evening"], goals: ["scrim_practice", "find_team"], communicationStyles: ["quiet_focus", "try_hard"], riotId: "HieuSniper#VN1", verificationStatus: "SELF_REPORTED", bio: "Initiator thich tap luyen co lich co dinh.", onboardingComplete: true }],
+    [anhtu.id, "LEAGUE_OF_LEGENDS", { rankTier: "Platinum", rankLevel: 3, role: "Support", schedule: ["weekday_evening"], goals: ["rank_climb", "join_tournaments"], communicationStyles: ["shotcaller", "beginner_friendly"], riotId: "AnhTu#VN1", verificationStatus: "SELF_REPORTED", bio: "Support main, uu tien leo rank va di giai.", onboardingComplete: true }],
+    [linh.id, "LEAGUE_OF_LEGENDS", { rankTier: "Gold", rankLevel: 1, role: "Mid", schedule: ["weekend"], goals: ["casual_play", "find_team"], communicationStyles: ["chill", "quiet_focus"], playModes: ["ranked", "aram"], verificationStatus: "UNVERIFIED", bio: "Mid main, tim nhom choi cuoi tuan.", voiceChat: "always", lossReaction: "frustrated", mains: ["Ahri"], questionnaireAt: new Date("2026-09-21T12:00:00Z"), onboardingComplete: true }],
+  ];
+  for (const [userId, game, data] of profiles) {
+    await prisma.playerProfile.upsert({
+      where: { userId_game: { userId, game } },
+      // Only play modes and questionnaire answers are re-applied, so existing databases pick up the newer demo data.
+      update: {
+        ...(data.playModes ? { playModes: data.playModes } : {}),
+        ...(data.questionnaireAt ? { voiceChat: data.voiceChat, lossReaction: data.lossReaction, mains: data.mains, questionnaireAt: data.questionnaireAt } : {}),
+      },
+      create: { userId, game, ...data },
+    });
+  }
 
-  await prisma.playerProfile.upsert({
-    where: { userId: khoa.id },
-    update: {},
-    create: {
-      userId: khoa.id,
-      game: "VALORANT",
-      rankTier: "Diamond",
-      rankLevel: 1,
-      role: "Sentinel",
-      schedule: ["weekday_evening", "weekend"],
-      goals: ["rank_climb", "scrim_practice"],
-      communicationStyles: ["try_hard", "shotcaller"],
-      riotId: "Khoa#1011",
-      verificationStatus: "VERIFIED",
-      reputationBadge: "TRUSTED",
-      bio: "Sentinel, call tot, dang tuyen team nghiem tuc.",
-      onboardingComplete: true,
-    },
-  });
+  // Same campus for the two LoL demo players, so "Same campus" shows up as a match reason.
+  await prisma.user.update({ where: { id: minh.id }, data: { ageRange: "18_21", campus: "hanoi" } });
+  await prisma.user.update({ where: { id: linh.id }, data: { ageRange: "18_21", campus: "hanoi" } });
 
-  await prisma.playerProfile.upsert({
-    where: { userId: hieu.id },
-    update: {},
-    create: {
-      userId: hieu.id,
-      game: "VALORANT",
-      rankTier: "Silver",
-      rankLevel: 3,
-      role: "Initiator",
-      schedule: ["weekday_evening"],
-      goals: ["scrim_practice", "find_team"],
-      communicationStyles: ["quiet_focus", "try_hard"],
-      riotId: "HieuSniper#VN1",
-      verificationStatus: "SELF_REPORTED",
-      reputationBadge: "NEW",
-      bio: "Initiator thich tap luyen co lich co dinh.",
-      onboardingComplete: true,
-    },
-  });
-
-  await prisma.playerProfile.upsert({
-    where: { userId: anhtu.id },
-    update: {},
-    create: {
-      userId: anhtu.id,
-      game: "LEAGUE_OF_LEGENDS",
-      rankTier: "Platinum",
-      rankLevel: 3,
-      role: "Support",
-      schedule: ["weekday_evening"],
-      goals: ["rank_climb", "join_tournaments"],
-      communicationStyles: ["shotcaller", "beginner_friendly"],
-      riotId: "AnhTu#VN1",
-      verificationStatus: "VERIFIED",
-      reputationBadge: "TRUSTED",
-      bio: "Support main, uu tien leo rank va di giai.",
-      onboardingComplete: true,
-    },
-  });
-
-  await prisma.playerProfile.upsert({
-    where: { userId: linh.id },
-    update: {},
-    create: {
-      userId: linh.id,
-      game: "LEAGUE_OF_LEGENDS",
-      rankTier: "Gold",
-      rankLevel: 1,
-      role: "Mid",
-      schedule: ["weekend"],
-      goals: ["casual_play", "find_team"],
-      communicationStyles: ["chill", "quiet_focus"],
-      verificationStatus: "UNVERIFIED",
-      reputationBadge: "NEW",
-      bio: "Mid main, tim nhom choi cuoi tuan.",
-      onboardingComplete: true,
-    },
-  });
+  // Badges are earned (Riot verification, accepted matches, sessions), so seeded users start at NEW.
+  await prisma.user.updateMany({ where: { id: { in: [minh.id, khoa.id, anhtu.id] } }, data: { reputationBadge: "NEW" } });
 
   await prisma.coachProfile.upsert({
     where: { userId: khoa.id },
@@ -127,8 +55,11 @@ async function main() {
       bio: "Coach Valorant cho người chơi muốn cải thiện game sense, setup site và giao tiếp trong đội.",
       availability: ["Tối T3", "Tối T5", "Cuối tuần"],
       active: true,
+      reviewStatus: "APPROVED",
     },
     create: {
+      reviewStatus: "APPROVED",
+      reviewedAt: new Date(),
       userId: khoa.id,
       game: "VALORANT",
       specialties: ["Sentinel setup", "VOD review", "Shotcalling"],
@@ -147,8 +78,11 @@ async function main() {
       bio: "Coach LoL tập trung vào macro, kiểm soát tầm nhìn và cách phối hợp bot lane hiệu quả.",
       availability: ["Tối T2", "Tối T6", "Chiều Chủ nhật"],
       active: true,
+      reviewStatus: "APPROVED",
     },
     create: {
+      reviewStatus: "APPROVED",
+      reviewedAt: new Date(),
       userId: anhtu.id,
       game: "LEAGUE_OF_LEGENDS",
       specialties: ["Support macro", "Vision control", "Rank climbing"],
@@ -157,6 +91,29 @@ async function main() {
       availability: ["Tối T2", "Tối T6", "Chiều Chủ nhật"],
     },
   });
+
+  // Past agreed sessions so the seeded reviews below correspond to real completed sessions.
+  async function seedPastSession(id: string, coachUserId: string, playerId: string, startsAt: string, price: number) {
+    const coach = await prisma.coachProfile.findUniqueOrThrow({ where: { userId: coachUserId } });
+    await prisma.coachingRequest.upsert({
+      where: { id },
+      update: {},
+      create: {
+        id,
+        coachId: coach.id,
+        playerId,
+        proposedStartAt: new Date(startsAt),
+        durationMinutes: 60,
+        proposedPrice: price,
+        message: "VOD review",
+        status: "AGREED",
+        lastProposedById: coachUserId,
+      },
+    });
+  }
+  await seedPastSession("seed-coaching-khoa-minh", khoa.id, minh.id, "2026-09-05T13:00:00.000Z", 180000);
+  await seedPastSession("seed-coaching-khoa-hieu", khoa.id, hieu.id, "2026-09-12T13:00:00.000Z", 180000);
+  await seedPastSession("seed-coaching-anhtu-linh", anhtu.id, linh.id, "2026-09-14T09:00:00.000Z", 150000);
 
   const coachKhoa = await prisma.coachProfile.findFirst({ where: { userId: khoa.id } });
   if (coachKhoa) {
@@ -236,17 +193,48 @@ async function main() {
     },
   });
 
+  // ARAM teams store the full ladder and no needed roles; matching ignores both.
+  const aramTeam = await prisma.team.upsert({
+    where: { id: "seed-team-aram-weekend" },
+    update: {},
+    create: {
+      id: "seed-team-aram-weekend",
+      captainId: linh.id,
+      name: "Weekend ARAM",
+      game: "LEAGUE_OF_LEGENDS",
+      mode: "aram",
+      rankMin: "Unranked",
+      rankMax: "Challenger",
+      neededRoles: [],
+      schedule: ["weekend", "late_night"],
+      goals: ["casual_play"],
+      communicationStyle: "chill",
+      description: "Nhom ARAM cuoi tuan, choi vui, khong can rank.",
+      recruitmentOpen: true,
+    },
+  });
+
   for (const [teamId, userId, role] of [
     [phoenix.id, khoa.id, "captain"],
     [nightOwls.id, hieu.id, "captain"],
     [dragon.id, anhtu.id, "captain"],
+    [aramTeam.id, linh.id, "captain"],
   ] as const) {
     await prisma.teamMember.upsert({
       where: { teamId_userId: { teamId, userId } },
       update: { role },
       create: { teamId, userId, role },
     });
+    // Team room chat mirrors the roster (apps/api teams/team-chat.ts).
+    const room = await prisma.conversation.upsert({ where: { teamId }, update: {}, create: { teamId } });
+    await prisma.conversationParticipant.upsert({
+      where: { conversationId_userId: { conversationId: room.id, userId } },
+      update: {},
+      create: { conversationId: room.id, userId, lastReadAt: new Date() },
+    });
   }
+
+  await seedCommunities([minh.id, khoa.id, hieu.id, anhtu.id, linh.id]);
 
   await prisma.tournamentEvent.upsert({
     where: { id: "seed-event-valorant-1" },
@@ -256,8 +244,8 @@ async function main() {
       title: "FPT Valorant Beta Cup",
       game: "VALORANT",
       organizer: "FPT EsportHub",
-      startsAt: new Date("2026-08-01T12:00:00.000Z"),
-      deadlineAt: new Date("2026-07-25T12:00:00.000Z"),
+      startsAt: new Date("2026-11-14T12:00:00.000Z"),
+      deadlineAt: new Date("2026-11-07T12:00:00.000Z"),
       rules: "5v5, Bo3 playoffs, student teams only.",
     },
   });
@@ -270,8 +258,8 @@ async function main() {
       title: "LOL University Cup",
       game: "LEAGUE_OF_LEGENDS",
       organizer: "VUG Esports",
-      startsAt: new Date("2026-09-01T12:00:00.000Z"),
-      deadlineAt: new Date("2026-08-20T12:00:00.000Z"),
+      startsAt: new Date("2026-12-05T12:00:00.000Z"),
+      deadlineAt: new Date("2026-11-28T12:00:00.000Z"),
       rules: "5v5, group stage Bo1, playoffs Bo3.",
     },
   });
@@ -290,6 +278,7 @@ async function main() {
       senderId: khoa.id,
       receiverId: minh.id,
       type: "PLAYER_TO_PLAYER",
+      game: "VALORANT",
       status: "PENDING",
       message: "Choi cung khong? Team minh dang can Duelist.",
     },
@@ -303,6 +292,7 @@ async function main() {
       senderId: minh.id,
       teamId: phoenix.id,
       type: "PLAYER_TO_TEAM",
+      game: "VALORANT",
       status: "ACCEPTED",
       message: "Minh muon apply vao team Phoenix Rising.",
     },
@@ -316,6 +306,7 @@ async function main() {
       senderId: hieu.id,
       receiverId: minh.id,
       type: "PLAYER_TO_PLAYER",
+      game: "VALORANT",
       status: "DECLINED",
       message: "Toi nay duo Valorant khong?",
     },
@@ -358,10 +349,147 @@ async function main() {
     },
   });
 
+  // Offline tournaments: an approved demo venue with one upcoming LoL cup. The owner plays too, so the app shell opens normally.
+  const venueOwner = await upsertUser("seed-user-venue", "venue@fpt-esporthub.local", "CyberCoreHoaLac");
+  await prisma.playerProfile.upsert({
+    where: { userId_game: { userId: venueOwner.id, game: "LEAGUE_OF_LEGENDS" } },
+    update: {},
+    create: { userId: venueOwner.id, game: "LEAGUE_OF_LEGENDS", rankTier: "Silver", rankLevel: 2, role: "Top", schedule: ["weekend"], goals: ["join_tournaments"], communicationStyles: ["chill"], verificationStatus: "UNVERIFIED", onboardingComplete: true },
+  });
+  const venue = await prisma.venue.upsert({
+    where: { ownerId: venueOwner.id },
+    update: {},
+    create: { id: "seed-venue-cybercore", ownerId: venueOwner.id, name: "CyberCore Hoa Lac", address: "Khu CNC Hoa Lac, Thach That", city: "Hanoi", pcCount: 80, status: "APPROVED", reviewedAt: new Date() },
+  });
+  const cupStart = new Date(Date.now() + 7 * 86_400_000);
+  cupStart.setHours(19, 0, 0, 0);
+  await prisma.tournament.upsert({
+    where: { id: "seed-offline-cup" },
+    update: {},
+    create: {
+      id: "seed-offline-cup",
+      venueId: venue.id,
+      title: "CyberCore LoL Cup",
+      game: "LEAGUE_OF_LEGENDS",
+      format: "SINGLE_ELIMINATION",
+      teamSize: 5,
+      maxTeams: 8,
+      bestOf: 1,
+      finalBestOf: 3,
+      entryFee: 250000,
+      prize: "2.000.000 VND + gio choi mien phi",
+      rules: "5v5 Summoner's Rift, tournament draft. Co mat tai quan truoc 18:30 de check-in.",
+      startsAt: cupStart,
+    },
+  });
+
   console.log("Seed complete");
-  console.log("Login users: minh@fpt.edu.vn, admin@fpt-esporthub.local");
+  console.log("Login users: minh@fpt.edu.vn, venue@fpt-esporthub.local (venue host), admin@fpt-esporthub.local");
   console.log("Password: Password123!");
   void admin;
+}
+
+/** Discord-style communities. Text channel chats mirror the members (apps/api communities/community-chat.ts). */
+async function seedCommunities([minh, khoa, hieu, anhtu, linh]: string[]) {
+  // Any other accounts in the database fill the member lists; none on a fresh install.
+  const others = await prisma.user.findMany({
+    where: { id: { notIn: [minh, khoa, hieu, anhtu, linh] }, role: "USER" },
+    orderBy: { createdAt: "asc" },
+    take: 40,
+    select: { id: true },
+  });
+  const extra = others.map((user) => user.id);
+  const communities = [
+    {
+      id: "seed-community-valorant",
+      ownerId: khoa,
+      name: "FPT Valorant Hub",
+      description: "Cộng đồng Valorant của sinh viên FPT. Tìm đồng đội, leo rank, xem giải cùng nhau.",
+      game: "VALORANT" as const,
+      members: [minh, hieu, linh, ...extra.slice(0, 24)],
+      channels: [
+        { key: "chung", name: "chung", kind: "TEXT" as const },
+        { key: "lfg", name: "tìm-đồng-đội", kind: "TEXT" as const },
+        { key: "clips", name: "clip-highlight", kind: "TEXT" as const },
+        { key: "lobby", name: "Sảnh chờ", kind: "VOICE" as const },
+        { key: "ranked", name: "Leo rank", kind: "VOICE" as const },
+        { key: "scrim", name: "Scrim 5v5", kind: "VOICE" as const },
+      ],
+      messages: [
+        [khoa, "Chào mọi người, đây là chỗ tụ tập của team Valorant FPT. Ai cần tìm duo cứ vào #tìm-đồng-đội nhé."],
+        [minh, "Tối nay có ai leo rank Gold không? Mình main Duelist."],
+        [hieu, "Mình Sentinel, 9h tối vào phòng Leo rank nha."],
+      ] as const,
+    },
+    {
+      id: "seed-community-lol",
+      ownerId: anhtu,
+      name: "LMHT Hà Nội",
+      description: "Hội Liên Minh Huyền Thoại khu Hà Nội. ARAM cuối tuần, flex tối thứ 6, offline ở quán net.",
+      game: "LEAGUE_OF_LEGENDS" as const,
+      members: [minh, linh, khoa, ...extra.slice(12, 32)],
+      channels: [
+        { key: "chung", name: "chung", kind: "TEXT" as const },
+        { key: "lfg", name: "tìm-đồng-đội", kind: "TEXT" as const },
+        { key: "builds", name: "build-và-meta", kind: "TEXT" as const },
+        { key: "lobby", name: "Sảnh chờ", kind: "VOICE" as const },
+        { key: "aram", name: "ARAM chill", kind: "VOICE" as const },
+      ],
+      messages: [
+        [anhtu, "Welcome! Cuối tuần này có ai đi offline ở CyberCore không?"],
+        [linh, "Mình đi, đang tìm thêm 1 jungle cho team flex."],
+        [minh, "Mình jungle đây, main Lee Sin với Viego."],
+      ] as const,
+    },
+    {
+      id: "seed-community-fpt",
+      ownerId: linh,
+      name: "Sinh viên FPT Gaming",
+      description: "Chơi gì cũng được: Valorant, LMHT hay game mới ra. Nói chuyện, tìm bạn chơi, chia sẻ lịch giải.",
+      game: null,
+      members: [minh, khoa, hieu, anhtu, ...extra.slice(20, 40)],
+      channels: [
+        { key: "chung", name: "chung", kind: "TEXT" as const },
+        { key: "events", name: "lịch-giải", kind: "TEXT" as const },
+        { key: "lobby", name: "Phòng chung", kind: "VOICE" as const },
+        { key: "study", name: "Học bài cùng nhau", kind: "VOICE" as const },
+      ],
+      messages: [
+        [linh, "Server chung cho mọi game nhé. Lịch giải mới sẽ ghim ở #lịch-giải."],
+        [hieu, "Có ai thử game mới ra tuần này chưa?"],
+      ] as const,
+    },
+  ];
+
+  for (const community of communities) {
+    const { id, members, channels, messages, ...data } = community;
+    await prisma.community.upsert({ where: { id }, update: {}, create: { id, ...data } });
+    const roster = [...new Set([data.ownerId, ...members])];
+    await prisma.communityMember.createMany({
+      data: roster.map((userId) => ({ communityId: id, userId, role: userId === data.ownerId ? "owner" : "member" })),
+      skipDuplicates: true,
+    });
+    for (const [position, channel] of channels.entries()) {
+      const channelId = `${id}-${channel.key}`;
+      await prisma.communityChannel.upsert({
+        where: { id: channelId },
+        update: {},
+        create: { id: channelId, communityId: id, name: channel.name, kind: channel.kind, position },
+      });
+      if (channel.kind !== "TEXT") continue;
+      const conversation = await prisma.conversation.upsert({ where: { channelId }, update: {}, create: { channelId } });
+      await prisma.conversationParticipant.createMany({
+        data: roster.map((userId) => ({ conversationId: conversation.id, userId, lastReadAt: new Date() })),
+        skipDuplicates: true,
+      });
+      if (channel.key !== "chung" || (await prisma.message.count({ where: { conversationId: conversation.id } })) > 0) continue;
+      for (const [index, [senderId, content]] of messages.entries()) {
+        await prisma.message.create({
+          data: { conversationId: conversation.id, senderId, content, createdAt: new Date(Date.now() - (messages.length - index) * 7 * 60_000) },
+        });
+      }
+    }
+  }
 }
 
 main()

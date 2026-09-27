@@ -3,6 +3,8 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  Logger,
+  ForbiddenException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { PrismaService } from "../prisma/prisma.service";
@@ -12,15 +14,20 @@ import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { EmailService } from "../email/email.service";
 
 const SALT_ROUNDS = 10;
 const RESET_TOKEN_TTL_MS = 1000 * 60 * 30;
+const FORGOT_PASSWORD_MESSAGE = "If an account exists for this email, a reset link has been sent.";
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private jwtService: JwtService,
     private prisma: PrismaService,
+    private emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -65,6 +72,10 @@ export class AuthService {
       throw new UnauthorizedException("Invalid credentials");
     }
 
+    if (user.status === "BANNED") {
+      throw new ForbiddenException("Account suspended");
+    }
+
     const token = this.signToken(user.id, user.email, user.role);
 
     return {
@@ -90,26 +101,34 @@ export class AuthService {
       where: { email: dto.email },
     });
 
-    if (!user) {
-      return this.forgotPasswordResponse();
+    if (user) {
+      // Not awaited: response time must not reveal whether the account exists.
+      void this.issueResetLink(user.id, user.email).catch(() => {
+        this.logger.error("Could not issue a password reset link.");
+      });
     }
 
+    return { message: FORGOT_PASSWORD_MESSAGE };
+  }
+
+  private async issueResetLink(userId: string, email: string) {
     const resetToken = randomBytes(32).toString("hex");
     const tokenHash = this.hashResetToken(resetToken);
     const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
 
     await this.prisma.passwordResetToken.deleteMany({
-      where: { userId: user.id },
+      where: { userId },
     });
     await this.prisma.passwordResetToken.create({
       data: {
-        userId: user.id,
+        userId,
         tokenHash,
         expiresAt,
       },
     });
 
-    return this.forgotPasswordResponse(resetToken);
+    const webOrigin = (process.env.WEB_ORIGIN ?? "http://localhost:3000").replace(/\/$/, "");
+    await this.emailService.sendPasswordReset(email, `${webOrigin}/reset-password?token=${resetToken}`);
   }
 
   async resetPassword(dto: ResetPasswordDto) {
@@ -147,13 +166,6 @@ export class AuthService {
 
   private hashResetToken(token: string): string {
     return createHash("sha256").update(token).digest("hex");
-  }
-
-  private forgotPasswordResponse(resetToken?: string) {
-    return {
-      message: "If an account exists for this email, a reset link will be available shortly.",
-      ...(process.env.NODE_ENV !== "production" && resetToken ? { resetToken } : {}),
-    };
   }
 
   private sanitizeUser(user: {

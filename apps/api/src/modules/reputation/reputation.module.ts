@@ -1,6 +1,7 @@
-import { Module } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { ReputationService } from "./reputation.service";
 
+@Global()
 @Module({
   providers: [ReputationService],
   exports: [ReputationService],

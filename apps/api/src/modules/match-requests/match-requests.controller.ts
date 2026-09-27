@@ -5,7 +5,6 @@ import {
   Put,
   Body,
   Param,
-  Query,
   UseGuards,
   Request,
 } from "@nestjs/common";
@@ -28,11 +27,8 @@ export class MatchRequestsController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(
-    @Request() req: { user: { id: string } },
-    @Query("direction") direction?: string,
-  ) {
-    return this.matchRequestsService.findAll(req.user.id, direction);
+  findAll(@Request() req: { user: { id: string } }) {
+    return this.matchRequestsService.findAll(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)

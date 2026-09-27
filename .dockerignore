@@ -1,0 +1,14 @@
+**/node_modules
+**/.next
+**/dist
+**/*.tsbuildinfo
+.env
+.env.*
+deploy/.env.*
+output
+test-results
+playwright-report
+e2e
+docs
+.swarm
+**/uploads

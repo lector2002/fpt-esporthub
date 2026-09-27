@@ -1,363 +1,222 @@
 import { Injectable, ForbiddenException } from "@nestjs/common";
-import { GameId } from "@fpt-esporthub/database";
+import type { GameId, PlayerProfile } from "@fpt-esporthub/database";
+import { BOOST_SORT_BONUS, isPromoted } from "../credits/promotion";
 import { PrismaService } from "../prisma/prisma.service";
-import { gameRanks } from "../lookups/lookup-data";
+import { findActiveProfile, toGameSlug } from "../../common/game";
+import { MAX_TEAM_MEMBERS } from "../match-requests/match-requests.constants";
+import type { PlayMode } from "../lookups/lookup-data";
+import {
+  ARAM_WEIGHTS,
+  WEIGHTS,
+  buildReasons,
+  communicationCompatibility,
+  communicationFit,
+  goalOverlap,
+  rankCompatibility,
+  rankRangeCompatibility,
+  reputationScore,
+  playerRoleFit,
+  roleCompatibility,
+  sameCampus,
+  scheduleOverlap,
+  totalScore,
+} from "./matching.scoring";
+import { loadRequestStates, NO_REQUEST } from "./request-state";
+import { EQUIPPED_SELECT, toCosmeticsView } from "../cosmetics/catalog";
 
-const WEIGHTS = {
-  rank: 0.3,
-  role: 0.2,
-  schedule: 0.2,
-  goals: 0.15,
-  communication: 0.1,
-  reputation: 0.05,
-};
+export type MatchMode = "find_players" | "find_teams";
 
-interface ProfileLike {
-  game: GameId;
-  rankTier: string;
-  rankLevel: number | null;
-  role: string;
-  schedule: string[];
-  goals: string[];
-  communicationStyles: string[];
-  reputationBadge: string;
-  verificationStatus: string;
-  lookingStatus: string;
-  onboardingComplete: boolean;
-  bio: string | null;
-}
+/** Restricted and banned accounts are never suggested (they can't reply, or can't sign in). */
+const HIDDEN_STATUSES = ["RESTRICTED", "BANNED"] as const;
 
-interface TeamLike {
-  game: GameId;
-  rankMin: string;
-  rankMax: string;
-  neededRoles: string[];
-  schedule: string[];
-  goals: string[];
-  communicationStyle: string;
-  recruitmentOpen: boolean;
-}
-
-function getRankSort(game: GameId, tier: string, level: number | null): number {
-  const ranks = gameRanks[game.toLowerCase()];
-  if (!ranks) return 0;
-  const match = ranks.find((r) => r.tier === tier && r.level === level);
-  return match?.sort ?? 0;
-}
-
-function rankCompatibility(
-  game: GameId,
-  aTier: string,
-  aLevel: number | null,
-  bTier: string,
-  bLevel: number | null,
-): number {
-  const aSort = getRankSort(game, aTier, aLevel);
-  const bSort = getRankSort(game, bTier, bLevel);
-  const maxSort = game === "VALORANT" ? 25 : 31;
-  const diff = Math.abs(aSort - bSort);
-  const maxDiff = maxSort - 1;
-  if (maxDiff === 0) return 1;
-  return Math.max(0, 1 - diff / maxDiff);
-}
-
-function roleCompatibility(aRole: string, bRoles: string[]): number {
-  if (bRoles.length === 0) return 0.5;
-  const match = bRoles.some((r) => r.toLowerCase() === aRole.toLowerCase());
-  return match ? 1 : 0;
-}
-
-function scheduleOverlap(aSchedule: string[], bSchedule: string[]): number {
-  if (aSchedule.length === 0 || bSchedule.length === 0) return 0;
-  const bSet = new Set(bSchedule.map((s) => s.toLowerCase()));
-  const overlap = aSchedule.filter((s) => bSet.has(s.toLowerCase())).length;
-  const maxLen = Math.max(aSchedule.length, bSchedule.length);
-  return maxLen === 0 ? 0 : overlap / maxLen;
-}
-
-function goalOverlap(aGoals: string[], bGoals: string[]): number {
-  if (aGoals.length === 0 || bGoals.length === 0) return 0;
-  const bSet = new Set(bGoals.map((g) => g.toLowerCase()));
-  const overlap = aGoals.filter((g) => bSet.has(g.toLowerCase())).length;
-  const maxLen = Math.max(aGoals.length, bGoals.length);
-  return maxLen === 0 ? 0 : overlap / maxLen;
-}
-
-function communicationCompatibility(
-  aStyles: string[],
-  bStyles: string[],
-): number {
-  if (aStyles.length === 0 || bStyles.length === 0) return 0;
-  const bSet = new Set(bStyles.map((s) => s.toLowerCase()));
-  const overlap = aStyles.filter((s) => bSet.has(s.toLowerCase())).length;
-  return overlap > 0 ? 1 : 0;
-}
-
-function reputationScore(badge: string, verification: string): number {
-  let score = 0;
-  switch (badge) {
-    case "TRUSTED":
-      score = 1;
-      break;
-    case "VERIFIED":
-      score = 0.8;
-      break;
-    case "CAUTION":
-      score = 0.2;
-      break;
-    default:
-      score = 0.4;
-  }
-  if (verification === "VERIFIED") score = Math.min(1, score + 0.2);
-  return score;
-}
-
-function buildReasons(scores: {
-  rank: number;
-  role: number;
-  schedule: number;
-  goals: number;
-  communication: number;
-  reputation: number;
-}): string[] {
-  const reasons: string[] = [];
-  if (scores.rank >= 0.7) reasons.push("Similar rank");
-  if (scores.role >= 0.9) reasons.push("Role matches what team needs");
-  if (scores.schedule >= 0.5) reasons.push("Overlapping schedule");
-  if (scores.goals >= 0.5) reasons.push("Shared goals");
-  if (scores.communication >= 0.9)
-    reasons.push("Compatible communication style");
-  if (scores.reputation >= 0.8) reasons.push("High reputation");
-  if (reasons.length === 0) reasons.push("Potential match");
-  return reasons.slice(0, 3);
+/** ARAM exists only for LoL; every other game matches in ranked. */
+function resolvePlayMode(game: GameId, requested: PlayMode | undefined): PlayMode {
+  return game === "LEAGUE_OF_LEGENDS" && requested === "aram" ? "aram" : "ranked";
 }
 
 @Injectable()
 export class MatchingService {
   constructor(private prisma: PrismaService) {}
 
-  async findMatches(userId: string, mode: "find_players" | "find_teams") {
-    const callerProfile = await this.prisma.playerProfile.findUnique({
-      where: { userId },
-      include: { user: { select: { updatedAt: true } } },
-    });
-
+  async findMatches(userId: string, mode: MatchMode, game: GameId | undefined, requestedPlayMode?: PlayMode) {
+    const callerProfile = await findActiveProfile(this.prisma, userId, game);
     if (!callerProfile || !callerProfile.onboardingComplete) {
       throw new ForbiddenException("Complete onboarding before matching");
     }
 
-    const blockedByMe = await this.prisma.block.findMany({
-      where: { blockerId: userId },
-      select: { blockedId: true },
-    });
-    const blockedIds = new Set(blockedByMe.map((b) => b.blockedId));
+    const playMode = resolvePlayMode(callerProfile.game, requestedPlayMode);
+    const blockedIds = await this.loadBlockedIds(userId);
+    const payload =
+      mode === "find_players"
+        ? await this.findPlayers(callerProfile, blockedIds, userId, playMode)
+        : await this.findTeams(callerProfile, blockedIds, userId, playMode);
 
-    const blockedMe = await this.prisma.block.findMany({
-      where: { blockedId: userId },
-      select: { blockerId: true },
-    });
-    for (const b of blockedMe) blockedIds.add(b.blockerId);
-
-    const matchPayload = mode === "find_players"
-      ? await this.findPlayers(callerProfile as ProfileLike, blockedIds, userId)
-      : await this.findTeams(callerProfile as ProfileLike, blockedIds);
-
-    const pendingSent = await this.prisma.matchRequest.findMany({
-      where: { senderId: userId, status: "PENDING" },
-      include: {
-        receiver: { select: { displayName: true } },
-        team: { select: { name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 3,
-    });
-
-    const acceptedCount = await this.prisma.matchRequest.count({
-      where: { senderId: userId, status: "ACCEPTED" },
-    });
-
-    const averageScore = matchPayload.matches.length
-      ? Math.round(matchPayload.matches.reduce((sum, match) => sum + match.score, 0) / matchPayload.matches.length)
+    const [pendingSent, accepted] = await Promise.all([
+      this.prisma.matchRequest.count({ where: { senderId: userId, status: "PENDING" } }),
+      this.prisma.matchRequest.count({ where: { senderId: userId, status: "ACCEPTED" } }),
+    ]);
+    const averageScore = payload.matches.length
+      ? Math.round(payload.matches.reduce((sum, match) => sum + match.score, 0) / payload.matches.length)
       : 0;
 
     return {
-      ...matchPayload,
+      ...payload,
+      playMode,
       profile: {
-        game: callerProfile.game === "VALORANT" ? "Valorant" : "League of Legends",
-        rank: callerProfile.rankLevel ? `${callerProfile.rankTier} ${callerProfile.rankLevel}` : callerProfile.rankTier,
+        game: toGameSlug(callerProfile.game),
+        rankTier: callerProfile.rankTier,
+        rankLevel: callerProfile.rankLevel,
         role: callerProfile.role,
-        schedule: callerProfile.schedule[0] ?? "Flexible",
-        updatedLabel: "Cập nhật gần đây",
+        schedule: callerProfile.schedule,
+        playModes: callerProfile.playModes,
+        updatedAt: callerProfile.updatedAt,
       },
-      stats: {
-        totalSuggestions: matchPayload.matches.length,
-        averageScore,
-        pendingSent: pendingSent.length,
-        accepted: acceptedCount,
-      },
-      pendingRequests: pendingSent.map((request) => ({
-        id: request.id,
-        name: request.receiver?.displayName ?? request.team?.name ?? "Đối tượng",
-        avatarEmoji: "⚡",
-        sentAtLabel: "Đang chờ phản hồi",
-        statusLabel: "Chờ",
-      })),
-      tips: [
-        { label: "Đã verify Email FPT (+10% score)", state: "done" },
-        {
-          label: callerProfile.verificationStatus === "VERIFIED" ? "Đã verify Riot ID (+15% score)" : "Đang chờ verify Riot ID (+15% score)",
-          state: callerProfile.verificationStatus === "VERIFIED" ? "done" : "pending",
-        },
-        {
-          label: "Cập nhật chi tiết lịch chơi (+5% score)",
-          state: callerProfile.schedule.length >= 2 ? "done" : "todo",
-        },
-      ],
+      stats: { totalSuggestions: payload.matches.length, averageScore, pendingSent, accepted },
     };
   }
 
-  private async findPlayers(
-    caller: ProfileLike,
-    blockedIds: Set<string>,
-    callerId: string,
-  ) {
-    const profiles = await this.prisma.playerProfile.findMany({
-      where: {
-        onboardingComplete: true,
-        lookingStatus: "open_to_match",
-        game: caller.game,
-        userId: { notIn: [...blockedIds, callerId] },
-      },
-      include: {
-        user: { select: { id: true, displayName: true } },
-      },
+  /** Users the caller blocked or who blocked the caller. */
+  private async loadBlockedIds(userId: string) {
+    const blocks = await this.prisma.block.findMany({
+      where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
+      select: { blockerId: true, blockedId: true },
     });
+    const ids = new Set<string>();
+    for (const b of blocks) ids.add(b.blockerId === userId ? b.blockedId : b.blockerId);
+    return ids;
+  }
 
-    const scored = profiles.map((p) => {
-      const profile = p as unknown as ProfileLike & { user: { id: string; displayName: string } };
+  private async findPlayers(caller: PlayerProfile, blockedIds: Set<string>, callerId: string, playMode: PlayMode) {
+    const aram = playMode === "aram";
+    const weights = aram ? ARAM_WEIGHTS : WEIGHTS;
+    const [callerUser, profiles, states] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: callerId }, select: { ageRange: true, campus: true } }),
+      this.prisma.playerProfile.findMany({
+        where: {
+          onboardingComplete: true,
+          lookingStatus: "open_to_match",
+          game: caller.game,
+          playModes: { has: playMode },
+          userId: { notIn: [...blockedIds, callerId] },
+          user: { status: { notIn: [...HIDDEN_STATUSES] } },
+        },
+        include: { user: { select: { id: true, displayName: true, reputationBadge: true, avatarKey: true, coverKey: true, ageRange: true, campus: true, ...EQUIPPED_SELECT } } },
+      }),
+      loadRequestStates(this.prisma, callerId, "player"),
+    ]);
+    const callerFit = { styles: caller.communicationStyles, voiceChat: caller.voiceChat, lossReaction: caller.lossReaction, ...fitFromUser(callerUser) };
+
+    const scored = profiles.map((profile) => {
       const scores = {
-        rank: rankCompatibility(
-          caller.game,
-          caller.rankTier,
-          caller.rankLevel,
-          profile.rankTier,
-          profile.rankLevel,
-        ),
-        role: roleCompatibility(profile.role, [caller.role]),
+        rank: aram ? 0 : rankCompatibility(caller.game, caller.rankTier, caller.rankLevel, profile.rankTier, profile.rankLevel),
+        role: aram ? 0 : playerRoleFit(caller.role, profile.role),
         schedule: scheduleOverlap(caller.schedule, profile.schedule),
         goals: goalOverlap(caller.goals, profile.goals),
-        communication: communicationCompatibility(
-          caller.communicationStyles,
-          profile.communicationStyles,
-        ),
-        reputation: reputationScore(
-          profile.reputationBadge,
-          profile.verificationStatus,
-        ),
+        communication: communicationFit(callerFit, {
+          styles: profile.communicationStyles,
+          voiceChat: profile.voiceChat,
+          lossReaction: profile.lossReaction,
+          ...fitFromUser(profile.user),
+        }),
+        reputation: reputationScore(profile.user.reputationBadge, profile.verificationStatus),
       };
-
-      const total =
-        scores.rank * WEIGHTS.rank +
-        scores.role * WEIGHTS.role +
-        scores.schedule * WEIGHTS.schedule +
-        scores.goals * WEIGHTS.goals +
-        scores.communication * WEIGHTS.communication +
-        scores.reputation * WEIGHTS.reputation;
-
+      const campus = sameCampus(callerFit.campus, profile.user.campus);
       return {
         type: "player" as const,
         id: profile.user.id,
         displayName: profile.user.displayName,
-        game: profile.game,
+        avatarKey: profile.user.avatarKey,
+        coverKey: profile.user.coverKey,
+        cosmetics: toCosmeticsView(profile.user),
+        game: toGameSlug(profile.game),
         rankTier: profile.rankTier,
         rankLevel: profile.rankLevel,
-          role: profile.role,
-          schedule: profile.schedule[0] ?? "See profile",
-          bio: profile.bio,
-          reputationBadge: profile.reputationBadge,
-          verificationStatus: profile.verificationStatus,
-          score: Math.round(total * 100),
-          reasons: buildReasons(scores),
-          cautionMessage: profile.reputationBadge === "CAUTION" ? "Tài khoản có lịch sử report, hãy thận trọng." : undefined,
+        role: profile.role,
+        schedule: profile.schedule,
+        playModes: profile.playModes,
+        mains: profile.mains,
+        recentChampion: profile.recentChampion,
+        bio: profile.bio,
+        reputationBadge: profile.user.reputationBadge,
+        verificationStatus: profile.verificationStatus,
+        boosted: isPromoted(profile.boostedUntil),
+        score: totalScore(scores, weights),
+        reasons: buildReasons(scores, weights, campus ? ["same_campus"] : []),
+        ...(states.get(profile.user.id) ?? NO_REQUEST),
+      };
+    });
+
+    scored.sort((a, b) => promotedScore(b) - promotedScore(a));
+    return { matches: scored };
+  }
+
+  private async findTeams(caller: PlayerProfile, blockedIds: Set<string>, callerId: string, playMode: PlayMode) {
+    const aram = playMode === "aram";
+    const weights = aram ? ARAM_WEIGHTS : WEIGHTS;
+    const [teams, states] = await Promise.all([
+      this.prisma.team.findMany({
+        where: {
+          game: caller.game,
+          mode: playMode,
+          recruitmentOpen: true,
+          captainId: { notIn: [...blockedIds, callerId] },
+          captain: { status: { notIn: [...HIDDEN_STATUSES] } },
+          members: { none: { userId: callerId } },
+        },
+        include: {
+          captain: { select: { id: true, displayName: true } },
+          _count: { select: { members: true } },
+        },
+      }),
+      loadRequestStates(this.prisma, callerId, "team"),
+    ]);
+
+    const maxMembers = MAX_TEAM_MEMBERS[caller.game];
+    const scored = teams
+      .filter((team) => team._count.members < maxMembers)
+      .map((team) => {
+        const scores = {
+          rank: aram ? 0 : rankRangeCompatibility(caller.game, caller.rankTier, caller.rankLevel, team.rankMin, team.rankMax),
+          role: aram ? 0 : roleCompatibility(caller.role, team.neededRoles, true),
+          schedule: scheduleOverlap(caller.schedule, team.schedule),
+          goals: goalOverlap(caller.goals, team.goals),
+          communication: communicationCompatibility(caller.communicationStyles, [team.communicationStyle]),
+          reputation: 0.5,
         };
-    });
+        return {
+          type: "team" as const,
+          id: team.id,
+          name: team.name,
+          logoKey: team.logoKey,
+          coverKey: team.coverKey,
+          captainId: team.captain.id,
+          captainName: team.captain.displayName,
+          game: toGameSlug(team.game),
+          mode: team.mode,
+          rankMin: team.rankMin,
+          rankMax: team.rankMax,
+          neededRoles: team.neededRoles,
+          memberCount: team._count.members,
+          maxMembers,
+          schedule: team.schedule,
+          description: team.description,
+          featured: isPromoted(team.featuredUntil),
+          score: totalScore(scores, weights),
+          reasons: buildReasons(scores, weights),
+          ...(states.get(team.id) ?? NO_REQUEST),
+        };
+      });
 
-    scored.sort((a, b) => b.score - a.score);
+    scored.sort((a, b) => promotedScore(b) - promotedScore(a));
     return { matches: scored };
   }
+}
 
-  private async findTeams(caller: ProfileLike, blockedIds: Set<string>) {
-    const teams = await this.prisma.team.findMany({
-      where: {
-        game: caller.game,
-        recruitmentOpen: true,
-        captainId: { notIn: [...blockedIds] },
-      },
-      include: {
-        captain: { select: { id: true, displayName: true } },
-        _count: { select: { members: true } },
-      },
-    });
+function fitFromUser(user: { ageRange: string | null; campus: string | null } | null) {
+  return { ageRange: user?.ageRange ?? null, campus: user?.campus ?? null };
+}
 
-    const scored = teams.map((t) => {
-      const team = t as unknown as TeamLike & {
-        id: string;
-        name: string;
-        captain: { id: string; displayName: string };
-        _count: { members: number };
-      };
-      const rankScore = (() => {
-        const game = caller.game;
-        const callerSort = getRankSort(game, caller.rankTier, caller.rankLevel);
-        const minSort = getRankSort(game, team.rankMin, null);
-        const maxSort = getRankSort(game, team.rankMax, null);
-        if (callerSort >= minSort && callerSort <= maxSort) return 1;
-        const dist =
-          callerSort < minSort
-            ? minSort - callerSort
-            : callerSort - maxSort;
-        const maxSortVal = game === "VALORANT" ? 25 : 31;
-        return Math.max(0, 1 - dist / maxSortVal);
-      })();
-
-      const scores = {
-        rank: rankScore,
-        role: roleCompatibility(caller.role, team.neededRoles),
-        schedule: scheduleOverlap(caller.schedule, team.schedule),
-        goals: goalOverlap(caller.goals, team.goals),
-        communication: communicationCompatibility(
-          caller.communicationStyles,
-          [team.communicationStyle],
-        ),
-        reputation: 0.5,
-      };
-
-      const total =
-        scores.rank * WEIGHTS.rank +
-        scores.role * WEIGHTS.role +
-        scores.schedule * WEIGHTS.schedule +
-        scores.goals * WEIGHTS.goals +
-        scores.communication * WEIGHTS.communication +
-        scores.reputation * WEIGHTS.reputation;
-
-      return {
-        type: "team" as const,
-        id: team.id,
-        name: team.name,
-        captainName: team.captain.displayName,
-        game: team.game,
-        rankMin: team.rankMin,
-        rankMax: team.rankMax,
-        neededRoles: team.neededRoles,
-        memberCount: team._count.members,
-        schedule: team.schedule[0] ?? "See team profile",
-        description: `${team._count.members}/5 thành viên · Captain ${team.captain.displayName}`,
-        score: Math.round(total * 100),
-        reasons: buildReasons(scores),
-      };
-    });
-
-    scored.sort((a, b) => b.score - a.score);
-    return { matches: scored };
-  }
+/** Paid boosts move a result up without changing the score users see. */
+function promotedScore(match: { score: number; boosted?: boolean; featured?: boolean }) {
+  return match.score + (match.boosted || match.featured ? BOOST_SORT_BONUS : 0);
 }
