@@ -110,11 +110,12 @@ function RemoveAchievementButton({ title, path }: { title: string; path: string 
           <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
+            // mutateAsync, not mutate callbacks: this tile unmounts when the refetched list drops it, which would skip the toast.
             onClick={() =>
-              remove.mutate(path, {
-                onSuccess: () => toast.success(t("achievementRemoved")),
-                onError: (error) => toast.error(error.message),
-              })
+              remove.mutateAsync(path).then(
+                () => toast.success(t("achievementRemoved")),
+                (error: Error) => toast.error(error.message),
+              )
             }
           >
             {t("removeAchievement")}
