@@ -79,13 +79,13 @@
   animation: fx-rotate 14s linear infinite;
 }
 
-/* Pets: a strip of frames side by side (public/pets; idle = 6, walk = 8 via --pet-frames), stepped through left to right.
-   Height comes from the caller. */
+/* Pets: a strip of frames side by side (public/pets; frame count via --pet-frames, default the 6 idle frames; seconds
+   per frame via --pet-frame-s), stepped through left to right. Height comes from the caller. */
 .pet-sprite {
   aspect-ratio: 89 / 96;
   background-repeat: no-repeat;
   background-size: calc(var(--pet-frames, 6) * 100%) 100%;
-  animation: pet-idle calc(var(--pet-frames, 6) * 0.2s) steps(var(--pet-frames, 6), jump-none) infinite;
+  animation: pet-idle calc(var(--pet-frames, 6) * var(--pet-frame-s, 0.2s)) steps(var(--pet-frames, 6), jump-none) infinite;
   pointer-events: none;
 }
 @keyframes pet-idle {
@@ -93,11 +93,11 @@
   to { background-position-x: 100%; }
 }
 .fx-pet-halo {
-  animation: pet-idle calc(var(--pet-frames, 6) * 0.2s) steps(var(--pet-frames, 6), jump-none) infinite, fx-halo 2.4s ease-in-out infinite;
+  animation: pet-idle calc(var(--pet-frames, 6) * var(--pet-frame-s, 0.2s)) steps(var(--pet-frames, 6), jump-none) infinite, fx-halo 2.4s ease-in-out infinite;
 }
 /* Epic pet: halo plus sparkles drifting around it. Needs a positioned element. */
 .fx-pet-sparkle {
-  animation: pet-idle calc(var(--pet-frames, 6) * 0.2s) steps(var(--pet-frames, 6), jump-none) infinite, fx-halo 1.8s ease-in-out infinite;
+  animation: pet-idle calc(var(--pet-frames, 6) * var(--pet-frame-s, 0.2s)) steps(var(--pet-frames, 6), jump-none) infinite, fx-halo 1.8s ease-in-out infinite;
 }
 .fx-pet-sparkle::before,
 .fx-pet-sparkle::after {

@@ -10,18 +10,36 @@ const WIDTH = Math.round((HEIGHT * 89) / 96);
 /** Walking speed in px per second, how long it rests between walks, and how often it stops before reaching the edge. */
 const SPEED = 80;
 const REST_MS: [number, number] = [900, 2600];
-const STOP_EARLY = 0.3;
-const WALK_FRAMES = 8;
+const STOP_EARLY = 0.45;
+/** Seconds per frame: the run cycle plays fast so the legs keep up with the ground, tricks a bit slower. */
+const WALK = { frames: 8, frameS: 0.1 };
+const IDLE_FRAME_S = 0.2;
+const TRICK_FRAME_S = 0.15;
+
+/** The Codex pet states cropped into public/pets/<pet>-<trick>.webp, with frame count and how many times to play. */
+const TRICKS = {
+  wave: { frames: 4, loops: 2 },
+  jump: { frames: 5, loops: 2 },
+  flop: { frames: 8, loops: 1 },
+  wait: { frames: 6, loops: 2 },
+  busy: { frames: 6, loops: 2 },
+  review: { frames: 6, loops: 2 },
+};
+type Trick = keyof typeof TRICKS;
+/** What it does when it stops; plain idle more often than any trick. */
+const ON_STOP: (Trick | null)[] = [null, null, null, "wave", "jump", "jump", "flop", "wait", "busy", "review"];
 
 type Facing = "left" | "right";
-type Pose = { x: number; facing: Facing; walkMs: number };
+type Pose = { x: number; facing: Facing; walkMs: number; trick: Trick | null };
 
 const between = (min: number, max: number) => min + Math.random() * (max - min);
+const pick = <T,>(items: T[]) => items[Math.floor(Math.random() * items.length)];
 const turn = (facing: Facing): Facing => (facing === "left" ? "right" : "left");
 
 /**
- * The equipped pet paces the bottom of the screen from edge to edge, resting now and then. It never takes clicks.
- * It keeps walking under reduced motion: equipping a pet is the player asking for it.
+ * The equipped pet paces the bottom of the screen from edge to edge using its own run cycle, and when it stops it
+ * sometimes waves, jumps, flops over or looks around. It never takes clicks.
+ * It keeps going under reduced motion: equipping a pet is the player asking for it.
  */
 export function PetWalker({ aboveTabBar }: { aboveTabBar: boolean }) {
   const pet = useCosmetics().data?.equipped.pet;
@@ -30,33 +48,52 @@ export function PetWalker({ aboveTabBar }: { aboveTabBar: boolean }) {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    if (!sprite) return;
+    if (!pet || !sprite) return;
+    const name = pet.replace("pet_", "");
+    // Load every strip up front so a new move never flashes blank.
+    for (const strip of ["left", "right", ...Object.keys(TRICKS)]) new Image().src = `/pets/${name}-${strip}.webp`;
+
     const maxX = () => Math.max(0, window.innerWidth - WIDTH);
-    let current: Pose = { x: between(0, maxX()), facing: Math.random() < 0.5 ? "left" : "right", walkMs: 0 };
+    let current: Pose = { x: between(0, maxX()), facing: Math.random() < 0.5 ? "left" : "right", walkMs: 0, trick: null };
     const show = (next: Pose) => {
       current = next;
       setPose(next);
     };
+    const later = (fn: () => void, ms: number) => {
+      timer.current = setTimeout(fn, ms);
+    };
 
+    const rest = () => {
+      show({ ...current, walkMs: 0, trick: null });
+      later(walk, between(...REST_MS));
+    };
     const walk = () => {
       const edge = current.facing === "right" ? maxX() : 0;
       const x = Math.random() < STOP_EARLY ? between(current.x, edge) : edge;
       const walkMs = (Math.abs(x - current.x) / SPEED) * 1000;
-      show({ ...current, x, walkMs });
-      timer.current = setTimeout(() => {
-        const atEdge = x === edge;
-        show({ x, facing: atEdge || Math.random() < 0.5 ? turn(current.facing) : current.facing, walkMs: 0 });
-        timer.current = setTimeout(walk, between(...REST_MS));
+      show({ ...current, x, walkMs, trick: null });
+      later(() => {
+        const facing = x === edge || Math.random() < 0.5 ? turn(current.facing) : current.facing;
+        const trick = pick(ON_STOP);
+        show({ x, facing, walkMs: 0, trick });
+        if (!trick) return later(walk, between(...REST_MS));
+        const { frames, loops } = TRICKS[trick];
+        later(rest, frames * TRICK_FRAME_S * loops * 1000);
       }, walkMs);
     };
     show(current);
-    timer.current = setTimeout(walk, 600);
+    later(walk, 600);
     return () => clearTimeout(timer.current);
-  }, [sprite]);
+  }, [pet, sprite]);
 
   if (!pet || !sprite || !pose) return null;
   const walking = pose.walkMs > 0;
   const name = pet.replace("pet_", "");
+  const move = walking
+    ? { src: `/pets/${name}-${pose.facing}.webp`, frames: WALK.frames, frameS: WALK.frameS }
+    : pose.trick
+      ? { src: `/pets/${name}-${pose.trick}.webp`, frames: TRICKS[pose.trick].frames, frameS: TRICK_FRAME_S }
+      : { src: sprite, frames: 6, frameS: IDLE_FRAME_S };
 
   return (
     <div
@@ -65,13 +102,17 @@ export function PetWalker({ aboveTabBar }: { aboveTabBar: boolean }) {
       style={{ transform: `translateX(${pose.x}px)`, transition: walking ? `transform ${pose.walkMs}ms linear` : undefined }}
       data-testid="pet-walker"
     >
+      {/* Keyed by the move so each one starts from its first frame. */}
       <span
+        key={move.src}
         className={cn("pet-sprite pet-walk block", PET_FX[pet])}
         style={{
           height: HEIGHT,
-          backgroundImage: `url(${walking ? `/pets/${name}-${pose.facing}.webp` : sprite})`,
-          ["--pet-frames" as string]: walking ? WALK_FRAMES : 6,
+          backgroundImage: `url(${move.src})`,
+          ["--pet-frames" as string]: move.frames,
+          ["--pet-frame-s" as string]: `${move.frameS}s`,
         }}
+        data-move={walking ? pose.facing : (pose.trick ?? "idle")}
       />
     </div>
   );
