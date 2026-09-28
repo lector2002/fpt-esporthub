@@ -17,6 +17,8 @@ import type {
   TournamentInput,
   UserStatus,
 } from "./types";
+import type { OfflineTournament, TournamentStatus } from "@/features/offline-tournaments/types";
+import type { AdminCoachDetail, AdminCommunityDetail, AdminCommunityRow, AdminCupDetail, AdminEventDetail, AdminTeamDetail, AdminVenueDetail } from "./detail-types";
 
 const ADMIN_KEY = ["admin"] as const;
 export const TOURNAMENTS_KEY = ["tournaments"] as const;
@@ -50,6 +52,64 @@ export function useAdminUser(id: string) {
   return useQuery({
     queryKey: [...ADMIN_KEY, "users", "detail", id],
     queryFn: () => api<AdminUserDetail>(`/admin/users/${encodeURIComponent(id)}`),
+  });
+}
+
+export function useAdminTeam(id: string) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "teams", "detail", id],
+    queryFn: () => api<AdminTeamDetail>(`/admin/teams/${encodeURIComponent(id)}`),
+  });
+}
+
+export function useAdminCups(params: { q?: string; status?: TournamentStatus; page: number }) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "cups", params],
+    queryFn: () => api<Paged<OfflineTournament>>(`/admin/cups${queryString(params)}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAdminCup(id: string) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "cups", "detail", id],
+    queryFn: () => api<AdminCupDetail>(`/admin/cups/${encodeURIComponent(id)}`),
+  });
+}
+
+export function useAdminEvent(id: string) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "events", "detail", id],
+    queryFn: () => api<AdminEventDetail>(`/admin/events/${encodeURIComponent(id)}`),
+  });
+}
+
+export function useAdminCommunities(params: { q?: string; page: number }) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "communities", params],
+    queryFn: () => api<Paged<AdminCommunityRow>>(`/admin/communities${queryString(params)}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAdminCommunity(id: string) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "communities", "detail", id],
+    queryFn: () => api<AdminCommunityDetail>(`/admin/communities/${encodeURIComponent(id)}`),
+  });
+}
+
+export function useAdminVenue(id: string) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "venues", "detail", id],
+    queryFn: () => api<AdminVenueDetail>(`/admin/venues/${encodeURIComponent(id)}`),
+  });
+}
+
+export function useAdminCoach(id: string) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "coaches", "detail", id],
+    queryFn: () => api<AdminCoachDetail>(`/admin/coaches/${encodeURIComponent(id)}`),
   });
 }
 

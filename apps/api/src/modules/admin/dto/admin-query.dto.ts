@@ -45,6 +45,8 @@ export class ListTeamsQueryDto extends PageQueryDto {
   q?: string;
 }
 
+export { ListTeamsQueryDto as ListCommunitiesQueryDto };
+
 export const PAGE_SIZE = 20;
 
 export function toPage(page?: string) {

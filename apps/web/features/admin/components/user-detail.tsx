@@ -1,24 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Coins, Flag, Receipt, Star, UserX, Wallet } from "lucide-react";
+import { Coins, Flag, Receipt, Star, UserX, Wallet } from "lucide-react";
 import { GameBadge, ReputationBadge, VerificationBadge } from "@/components/common/badges";
-import { EmptyState, QueryState } from "@/components/common/query-state";
+import { EmptyState } from "@/components/common/query-state";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCreditsMessages } from "@/features/credits/messages";
 import { formatVnd } from "@/features/offline-tournaments/format";
-import { ApiError } from "@/lib/api-client";
 import { formatRank } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
 import { useAdminUser } from "../api";
 import { STACK_ON_PHONE, formatDate, formatNumber } from "../format";
 import { useAdminMessages } from "../messages";
 import type { AdminUserDetail, TopUpStatus } from "../types";
+import { AdminDetail } from "./admin-detail";
 import { KpiCard } from "./finance-cards";
 import { UserStatusSelect } from "./users-tab";
 
@@ -30,31 +28,10 @@ const TOP_UP_TONE: Record<TopUpStatus, string> = {
 
 export function UserDetail({ id }: { id: string }) {
   const { t } = useAdminMessages();
-  const detail = useAdminUser(id);
-
   return (
-    <div className="flex flex-col gap-6">
-      <Button asChild variant="ghost" size="sm" className="self-start">
-        <Link href="/admin/users">
-          <ArrowLeft /> {t("backToUsers")}
-        </Link>
-      </Button>
-      {detail.error instanceof ApiError && detail.error.status === 404 ? (
-        <EmptyState icon={UserX} title={t("userNotFound")} />
-      ) : (
-        <QueryState
-          query={detail}
-          skeleton={
-            <div className="flex flex-col gap-3">
-              <Skeleton className="h-24" />
-              <Skeleton className="h-64" />
-            </div>
-          }
-        >
-          {(data) => <UserDetailBody data={data} />}
-        </QueryState>
-      )}
-    </div>
+    <AdminDetail query={useAdminUser(id)} backHref="/admin/users" backLabel={t("backToUsers")} notFound={{ icon: UserX, title: t("userNotFound") }}>
+      {(data) => <UserDetailBody data={data} />}
+    </AdminDetail>
   );
 }
 

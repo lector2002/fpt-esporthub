@@ -81,6 +81,11 @@ export class AdminCoachesController {
     return this.coachingService.listForAdmin(REVIEW_STATUSES.find((s) => s === status));
   }
 
+  @Get(":id")
+  get(@Param("id") id: string) {
+    return this.coachingService.adminFindOne(id);
+  }
+
   @Put(":id/review")
   review(@Param("id") id: string, @Body() dto: ReviewCoachDto) {
     return this.coachingService.review(id, dto);

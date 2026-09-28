@@ -3,14 +3,17 @@
 import { useState } from "react";
 import { Shield } from "lucide-react";
 import { toast } from "sonner";
+import { ABOVE_CARD_LINK } from "@/components/common/card-link";
 import { GameBadge } from "@/components/common/badges";
 import { QueryState } from "@/components/common/query-state";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAdminTeams, useUpdateRecruitment } from "../api";
 import { STACK_ON_PHONE, formatDate } from "../format";
+import { useAdminDetailMessages } from "../detail-messages";
 import { useAdminMessages } from "../messages";
 import type { AdminTeam } from "../types";
+import { LINKED_ROW, RowLink } from "./linked-row";
 import { Pagination } from "./pagination";
 import { SearchBar } from "./search-bar";
 
@@ -60,8 +63,40 @@ export function TeamsTab() {
   );
 }
 
+/** The whole row opens the team's detail page; the recruitment switch sits above that link. */
 function TeamRow({ team }: { team: AdminTeam }) {
-  const { t, language } = useAdminMessages();
+  const { language } = useAdminMessages();
+  const detail = useAdminDetailMessages().t;
+
+  return (
+    <TableRow className={LINKED_ROW}>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <GameBadge game={team.game} />
+          <div className="min-w-0">
+            <p className="font-medium">
+              <RowLink href={`/admin/teams/${team.id}`} label={detail("openTeam", { name: team.name })}>
+                {team.name}
+              </RowLink>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {team.rankMin} - {team.rankMax}
+            </p>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>{team.captain.displayName}</TableCell>
+      <TableCell className="tabular-nums">{team.memberCount}</TableCell>
+      <TableCell className="text-muted-foreground">{formatDate(team.createdAt, language)}</TableCell>
+      <TableCell>
+        <RecruitmentSwitch team={team} className={ABOVE_CARD_LINK} />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+export function RecruitmentSwitch({ team, className }: { team: Pick<AdminTeam, "id" | "name" | "recruitmentOpen">; className?: string }) {
+  const { t } = useAdminMessages();
   const update = useUpdateRecruitment();
 
   const onToggle = (recruitmentOpen: boolean) =>
@@ -74,29 +109,12 @@ function TeamRow({ team }: { team: AdminTeam }) {
     );
 
   return (
-    <TableRow>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <GameBadge game={team.game} />
-          <div className="min-w-0">
-            <p className="font-medium">{team.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {team.rankMin} - {team.rankMax}
-            </p>
-          </div>
-        </div>
-      </TableCell>
-      <TableCell>{team.captain.displayName}</TableCell>
-      <TableCell className="tabular-nums">{team.memberCount}</TableCell>
-      <TableCell className="text-muted-foreground">{formatDate(team.createdAt, language)}</TableCell>
-      <TableCell>
-        <Switch
-          checked={team.recruitmentOpen}
-          disabled={update.isPending}
-          onCheckedChange={onToggle}
-          aria-label={t("toggleRecruitment", { name: team.name })}
-        />
-      </TableCell>
-    </TableRow>
+    <Switch
+      checked={team.recruitmentOpen}
+      disabled={update.isPending}
+      onCheckedChange={onToggle}
+      aria-label={t("toggleRecruitment", { name: team.name })}
+      className={className}
+    />
   );
 }

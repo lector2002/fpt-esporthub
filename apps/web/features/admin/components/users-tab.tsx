@@ -17,6 +17,7 @@ import { useAdminUsers } from "../api";
 import { STACK_ON_PHONE, USER_STATUS_TONE } from "../format";
 import { useAdminMessages } from "../messages";
 import { USER_STATUSES, type AdminUser, type UserStatus } from "../types";
+import { LINKED_ROW } from "./linked-row";
 import { Pagination } from "./pagination";
 import { SearchBar } from "./search-bar";
 import { UserStatusDialog } from "./user-status-dialog";
@@ -105,7 +106,7 @@ function UserRow({ user }: { user: AdminUser }) {
   const href = `/admin/users/${user.id}`;
 
   return (
-    <TableRow className="relative cursor-pointer has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring">
+    <TableRow className={LINKED_ROW}>
       <TableCell>
         <CardLink href={href} />
         <div className="flex items-center gap-2">

@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { listAchievements } from "../media/achievement-view";
 import { PrismaService } from "../prisma/prisma.service";
 import { ReputationService } from "../reputation/reputation.service";
-import { findActiveProfile, parseGame } from "../../common/game";
+import { findActiveProfile, parseGame, toGameSlug } from "../../common/game";
 import { CreateCoachProfileDto } from "./dto/create-coach-profile.dto";
 import { CreateFeedbackDto } from "./dto/create-feedback.dto";
 import type { ReviewCoachDto } from "./dto/review-coach.dto";
@@ -10,6 +10,8 @@ import type { CoachReviewStatus } from "@fpt-esporthub/database";
 import { coachInclude, toCoachSummary } from "./coaching.mappers";
 
 const REVIEW_LIMIT = 20;
+const ADMIN_LIST_LIMIT = 30;
+const PERSON = { id: true, displayName: true, avatarKey: true } as const;
 const REVIEW_SELECT = {
   id: true,
   rating: true,
@@ -100,6 +102,51 @@ export class CoachingService {
       orderBy: [{ reviewStatus: "asc" }, { createdAt: "desc" }],
       take: 100,
     });
+  }
+
+  /** One coach for the admin: listing, sessions with their credit escrow, payout ledger and player feedback. */
+  async adminFindOne(id: string) {
+    const coach = await this.prisma.coachProfile.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, displayName: true, avatarKey: true, email: true, status: true } },
+        requests: {
+          select: {
+            id: true,
+            status: true,
+            settlement: true,
+            proposedStartAt: true,
+            durationMinutes: true,
+            proposedPrice: true,
+            creditHold: true,
+            createdAt: true,
+            player: { select: PERSON },
+          },
+          orderBy: { createdAt: "desc" },
+          take: ADMIN_LIST_LIMIT,
+        },
+        payouts: { select: { id: true, amount: true, kind: true, note: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: ADMIN_LIST_LIMIT },
+        feedbacks: { select: { id: true, rating: true, comment: true, createdAt: true, player: { select: PERSON } }, orderBy: { createdAt: "desc" }, take: ADMIN_LIST_LIMIT },
+      },
+    });
+    if (!coach) throw new NotFoundException("Coach not found");
+    const [byStatus, ledger, rating] = await Promise.all([
+      this.prisma.coachingRequest.groupBy({ by: ["status"], where: { coachId: id }, _count: true }),
+      this.prisma.coachPayoutEntry.groupBy({ by: ["kind"], where: { coachProfileId: id }, _sum: { amount: true } }),
+      this.prisma.coachFeedback.aggregate({ where: { coachId: id }, _avg: { rating: true }, _count: true }),
+    ]);
+    const { game, ...rest } = coach;
+    return {
+      coach: { ...rest, game: toGameSlug(game) },
+      stats: {
+        sessions: Object.fromEntries(byStatus.map((row) => [row.status, row._count])),
+        earned: ledger.find((row) => row.kind === "EARNING")?._sum.amount ?? 0,
+        paidOut: -(ledger.find((row) => row.kind === "PAYOUT")?._sum.amount ?? 0),
+        averageRating: rating._avg.rating,
+        feedbackCount: rating._count,
+      },
+      listLimit: ADMIN_LIST_LIMIT,
+    };
   }
 
   async review(id: string, dto: ReviewCoachDto) {

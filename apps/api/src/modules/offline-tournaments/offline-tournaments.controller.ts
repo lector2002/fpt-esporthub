@@ -4,6 +4,8 @@ import type { VenueStatus } from "@fpt-esporthub/database";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { Roles } from "../auth/guards/roles.decorator";
+import { toPage } from "../admin/dto/admin-query.dto";
+import { AdminCupsService } from "./admin-cups.service";
 import { OfflineTournamentsService } from "./offline-tournaments.service";
 import { BracketPlayService } from "./bracket-play.service";
 import { VenuesService } from "./venues.service";
@@ -11,6 +13,7 @@ import { ApplyVenueDto, ReviewVenueDto } from "./dto/venue.dto";
 import {
   CheckInDto,
   CreateOfflineTournamentDto,
+  ListCupsQueryDto,
   MatchResultDto,
   RegisterEntryDto,
   TournamentStatusDto,
@@ -53,9 +56,31 @@ export class AdminVenuesController {
     return this.venues.listForAdmin(filter);
   }
 
+  @Get(":id")
+  get(@Param("id") id: string) {
+    return this.venues.getForAdmin(id);
+  }
+
   @Put(":id/review")
   review(@Param("id") id: string, @Body() dto: ReviewVenueDto) {
     return this.venues.review(id, dto);
+  }
+}
+
+@Controller("admin/cups")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles("ADMIN")
+export class AdminCupsController {
+  constructor(private cups: AdminCupsService) {}
+
+  @Get()
+  list(@Query() query: ListCupsQueryDto) {
+    return this.cups.list(query.q, query.status, toPage(query.page));
+  }
+
+  @Get(":id")
+  get(@Param("id") id: string) {
+    return this.cups.get(id);
   }
 }
 

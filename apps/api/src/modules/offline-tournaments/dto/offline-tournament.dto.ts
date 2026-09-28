@@ -7,6 +7,7 @@ import {
   IsDateString,
   IsIn,
   IsInt,
+  IsNumberString,
   IsOptional,
   IsString,
   Length,
@@ -155,4 +156,21 @@ export class MatchResultDto {
   @Min(0)
   @Max(3)
   scoreB!: number;
+}
+
+export const TOURNAMENT_STATUSES = ["REGISTRATION", "CHECK_IN", "LIVE", "COMPLETED", "CANCELLED"] as const;
+
+export class ListCupsQueryDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
+  @IsOptional()
+  @IsIn(TOURNAMENT_STATUSES)
+  status?: (typeof TOURNAMENT_STATUSES)[number];
+
+  @IsOptional()
+  @IsNumberString()
+  page?: string;
 }

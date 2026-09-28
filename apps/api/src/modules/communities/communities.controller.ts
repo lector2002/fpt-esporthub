@@ -1,5 +1,9 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, Request, UseGuards } from "@nestjs/common";
+import { ListCommunitiesQueryDto, toPage } from "../admin/dto/admin-query.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
+import { Roles } from "../auth/guards/roles.decorator";
+import { AdminCommunitiesService } from "./admin-communities.service";
 import { CommunitiesService } from "./communities.service";
 import { CreateChannelDto } from "./dto/create-channel.dto";
 import { CreateCommunityDto } from "./dto/create-community.dto";
@@ -62,5 +66,22 @@ export class CommunitiesController {
   @Delete(":id/channels/:channelId")
   removeChannel(@Request() req: AuthedRequest, @Param("id") id: string, @Param("channelId") channelId: string) {
     return this.communities.removeChannel(id, req.user.id, channelId);
+  }
+}
+
+@Controller("admin/communities")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles("ADMIN")
+export class AdminCommunitiesController {
+  constructor(private communities: AdminCommunitiesService) {}
+
+  @Get()
+  list(@Query() query: ListCommunitiesQueryDto) {
+    return this.communities.list(query.q, toPage(query.page));
+  }
+
+  @Get(":id")
+  get(@Param("id") id: string) {
+    return this.communities.get(id);
   }
 }

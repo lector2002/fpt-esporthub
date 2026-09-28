@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, GraduationCap, X } from "lucide-react";
 import { toast } from "sonner";
+import { ABOVE_CARD_LINK } from "@/components/common/card-link";
 import { GameBadge } from "@/components/common/badges";
 import { QueryState } from "@/components/common/query-state";
 import { Badge } from "@/components/ui/badge";
@@ -15,14 +16,17 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatVnd } from "@/features/offline-tournaments/format";
 import { gameSlug } from "@/lib/contracts";
 import { useAdminCoaches, useReviewCoach, type AdminCoach, type CoachReviewStatus } from "../api";
+import { useAdminDetailMessages } from "../detail-messages";
 import { STACK_ON_PHONE, formatDate } from "../format";
 import { useAdminMessages } from "../messages";
+import { LINKED_ROW, RowLink } from "./linked-row";
 
 const FILTERS: (CoachReviewStatus | "ALL")[] = ["PENDING", "APPROVED", "REJECTED", "ALL"];
 
 /** Coach listings stay hidden from players until approved here. */
 export function CoachesTab() {
   const { t, language } = useAdminMessages();
+  const detail = useAdminDetailMessages().t;
   const [filter, setFilter] = useState<CoachReviewStatus | "ALL">("PENDING");
   const coaches = useAdminCoaches(filter === "ALL" ? null : filter);
   const review = useReviewCoach();
@@ -71,10 +75,14 @@ export function CoachesTab() {
             </TableHeader>
             <TableBody>
               {list.map((coach) => (
-                <TableRow key={coach.id}>
+                <TableRow key={coach.id} className={LINKED_ROW}>
                   <TableCell className="max-w-md whitespace-normal">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{coach.user.displayName}</span>
+                      <span className="font-medium">
+                        <RowLink href={`/admin/coaches/${coach.id}`} label={detail("openCoach", { name: coach.user.displayName })}>
+                          {coach.user.displayName}
+                        </RowLink>
+                      </span>
                       <GameBadge game={gameSlug(coach.game)} />
                     </div>
                     <p className="text-xs text-muted-foreground">{coach.user.email}</p>
@@ -87,7 +95,7 @@ export function CoachesTab() {
                     <p className="mt-1 text-xs text-muted-foreground">{formatDate(coach.createdAt, language)}</p>
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-2">
+                    <div className={`${ABOVE_CARD_LINK} flex justify-end gap-2`}>
                       {coach.reviewStatus !== "APPROVED" && (
                         <Button size="sm" onClick={() => send(coach, "APPROVED")} disabled={review.isPending}>
                           <Check /> {t("approveCoach")}

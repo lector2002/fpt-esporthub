@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Store, X } from "lucide-react";
 import { toast } from "sonner";
+import { ABOVE_CARD_LINK } from "@/components/common/card-link";
 import { QueryState } from "@/components/common/query-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,12 +15,15 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAdminVenues, useReviewVenue } from "@/features/offline-tournaments/api";
 import { useOfflineMessages } from "@/features/offline-tournaments/messages";
 import type { AdminVenue, VenueStatus } from "@/features/offline-tournaments/types";
+import { useAdminDetailMessages } from "../detail-messages";
 import { STACK_ON_PHONE, formatDate } from "../format";
+import { LINKED_ROW, RowLink } from "./linked-row";
 
 const FILTERS: (VenueStatus | "ALL")[] = ["PENDING", "APPROVED", "REJECTED", "ALL"];
 
 export function VenuesTab() {
   const { t, language } = useOfflineMessages();
+  const detail = useAdminDetailMessages().t;
   const [filter, setFilter] = useState<VenueStatus | "ALL">("PENDING");
   const venues = useAdminVenues(filter === "ALL" ? null : filter);
   const review = useReviewVenue();
@@ -70,9 +74,13 @@ export function VenuesTab() {
             </TableHeader>
             <TableBody>
               {list.map((venue) => (
-                <TableRow key={venue.id}>
+                <TableRow key={venue.id} className={LINKED_ROW}>
                   <TableCell className="whitespace-normal">
-                    <p className="font-medium">{venue.name}</p>
+                    <p className="font-medium">
+                      <RowLink href={`/admin/venues/${venue.id}`} label={detail("openVenue", { name: venue.name })}>
+                        {venue.name}
+                      </RowLink>
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {venue.address}, {venue.city}
                       {venue.phone ? ` · ${venue.phone}` : ""}
@@ -89,7 +97,7 @@ export function VenuesTab() {
                     <p className="mt-1 text-xs text-muted-foreground">{formatDate(venue.createdAt, language)}</p>
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-2">
+                    <div className={`${ABOVE_CARD_LINK} flex justify-end gap-2`}>
                       {venue.status !== "APPROVED" && (
                         <Button size="sm" onClick={() => send(venue, "APPROVED")} disabled={review.isPending}>
                           <Check /> {t("approve")}

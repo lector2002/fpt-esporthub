@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarDays, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { ABOVE_CARD_LINK } from "@/components/common/card-link";
 import { GameBadge } from "@/components/common/badges";
 import { QueryState } from "@/components/common/query-state";
 import {
@@ -20,9 +21,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDeleteTournament, useTournaments } from "../api";
 import { formatDate, toSlug } from "../format";
+import { useAdminDetailMessages } from "../detail-messages";
 import { useAdminMessages } from "../messages";
 import type { TournamentEvent } from "../types";
 import { EventFormDialog } from "./event-form-dialog";
+import { LINKED_ROW, RowLink } from "./linked-row";
 
 type When = "upcoming" | "past";
 
@@ -75,21 +78,27 @@ export function EventsTab() {
   );
 }
 
+/** The whole row opens the event's detail page; edit and delete sit above that link. */
 function EventRow({ event, onEdit, onDelete }: { event: TournamentEvent; onEdit: () => void; onDelete: () => void }) {
   const { t, language } = useAdminMessages();
+  const detail = useAdminDetailMessages().t;
   return (
-    <li className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+    <li className={`${LINKED_ROW} flex flex-col gap-3 p-3 hover:bg-muted/50 sm:flex-row sm:items-center`}>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <GameBadge game={toSlug(event.game)} />
-          <p className="truncate font-medium">{event.title}</p>
+          <p className="truncate font-medium">
+            <RowLink href={`/admin/events/${event.id}`} label={detail("openEvent", { name: event.title })}>
+              {event.title}
+            </RowLink>
+          </p>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
           {event.organizer} · {t("starts", { date: formatDate(event.startsAt, language, true) })} ·{" "}
           {t("deadline", { date: formatDate(event.deadlineAt, language, true) })}
         </p>
       </div>
-      <div className="flex gap-2">
+      <div className={`${ABOVE_CARD_LINK} flex gap-2`}>
         <Button variant="outline" size="sm" onClick={onEdit}>
           <Pencil /> {t("edit")}
         </Button>

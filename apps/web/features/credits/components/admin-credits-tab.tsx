@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ChevronsUpDown, Coins, Scale, X } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState, QueryState } from "@/components/common/query-state";
@@ -279,7 +280,9 @@ function PayableCoaches({ coaches }: { coaches: CoachingPayments["coaches"] }) {
           {coaches.map((coach) => (
             <li key={coach.id} className="flex items-center gap-3 p-3">
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{coach.user.displayName}</p>
+                <Link href={`/admin/coaches/${coach.id}`} className="block truncate font-medium hover:underline">
+                  {coach.user.displayName}
+                </Link>
                 <p className="truncate text-xs text-muted-foreground">{coach.user.email}</p>
                 <p className="text-xs text-muted-foreground">{t("payableCount", { count: coach.payableCredits, vnd: (coach.payableCredits * 1000).toLocaleString("vi-VN") })}</p>
               </div>

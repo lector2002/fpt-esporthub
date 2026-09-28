@@ -69,3 +69,15 @@ export class TournamentsController {
     return this.tournamentsService.remove(id);
   }
 }
+
+@Controller("admin/events")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles("ADMIN")
+export class AdminEventsController {
+  constructor(private tournamentsService: TournamentsService) {}
+
+  @Get(":id")
+  findOne(@Param("id") id: string) {
+    return this.tournamentsService.adminFindOne(id);
+  }
+}

@@ -11,6 +11,7 @@ import {
 import { AdminService } from "./admin.service";
 import { AdminFinanceService } from "./admin-finance.service";
 import { AdminReportsService } from "./admin-reports.service";
+import { AdminTeamsService } from "./admin-teams.service";
 import { FinanceQueryDto, ListReportsQueryDto, ListTeamsQueryDto, ListUsersQueryDto, toPage } from "./dto/admin-query.dto";
 import { UpdateReportDto } from "./dto/update-report.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
@@ -29,6 +30,7 @@ export class AdminController {
     private adminService: AdminService,
     private adminReportsService: AdminReportsService,
     private adminFinanceService: AdminFinanceService,
+    private adminTeamsService: AdminTeamsService,
   ) {}
 
   @Get("metrics")
@@ -78,6 +80,11 @@ export class AdminController {
   @Get("teams")
   getTeams(@Query() query: ListTeamsQueryDto) {
     return this.adminService.getTeams(query.q, toPage(query.page));
+  }
+
+  @Get("teams/:id")
+  getTeam(@Param("id") id: string) {
+    return this.adminTeamsService.getTeam(id);
   }
 
   @Put("teams/:id/recruitment")

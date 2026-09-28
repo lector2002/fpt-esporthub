@@ -7,6 +7,7 @@ import { CreateTournamentDto, UpdateTournamentDto } from "./dto/tournament.dto";
 
 const RECRUITING_TEAMS_LIMIT = 10;
 const INTERESTED_PLAYERS_LIMIT = 50;
+const ADMIN_INTEREST_LIMIT = 100;
 
 type EventRow = {
   id: string;
@@ -76,6 +77,19 @@ export class TournamentsService {
       this.teamsService.findRecruiting(event.game, viewerId, RECRUITING_TEAMS_LIMIT),
     ]);
     return { event: { ...toEventSummary(event), interestedPlayers, recruitingTeams } };
+  }
+
+  /** Admin: the event plus everyone interested, newest first, with no block or game filter. */
+  async adminFindOne(eventId: string) {
+    const event = await this.prisma.tournamentEvent.findUnique({ where: { id: eventId }, include: this.eventInclude() });
+    if (!event) throw new NotFoundException("Event not found");
+    const interests = await this.prisma.tournamentEventInterest.findMany({
+      where: { eventId },
+      orderBy: { createdAt: "desc" },
+      take: ADMIN_INTEREST_LIMIT,
+      select: { createdAt: true, user: { select: { id: true, displayName: true, avatarKey: true } } },
+    });
+    return { event: toEventSummary(event), interests, listLimit: ADMIN_INTEREST_LIMIT };
   }
 
   private async interestedPlayers(eventId: string, game: EventRow["game"], viewerId: string) {
