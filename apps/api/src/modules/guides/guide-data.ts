@@ -83,6 +83,31 @@ export function freeTier(data: GuideData): GuideData {
   return free as unknown as GuideData;
 }
 
+const MAX_RANK: Record<string, number> = { Q: 5, W: 5, E: 5, R: 3 };
+const R_LEVELS = [6, 11, 16];
+
+/**
+ * Sources list the path only to level 15; the rest follows from the rules: R takes its last rank at 16, then the basic
+ * abilities not yet maxed fill in by max order. Paths that don't fit those rules (champions with other ranks, like
+ * Udyr or Jayce) or are cut before 15 are left as they are.
+ */
+export function fullSkillPath(levels: string[], order: string[]): string[] {
+  const ranks = (path: string[], key: string) => path.filter((skill) => skill === key).length;
+  const standard = levels.every((key, i) => (key === "R") === R_LEVELS.includes(i + 1)) && Object.keys(MAX_RANK).every((key) => ranks(levels, key) <= MAX_RANK[key]);
+  if (levels.length < 15 || !standard) return levels;
+  const path = [...levels];
+  while (path.length < 18) {
+    const next = R_LEVELS.includes(path.length + 1) ? "R" : [...order, "Q", "W", "E"].find((key) => key !== "R" && ranks(path, key) < MAX_RANK[key]);
+    if (!next) break;
+    path.push(next);
+  }
+  return path;
+}
+
+export function withFullSkillPaths(data: GuideData): GuideData {
+  return { ...data, skillOrder: data.skillOrder.map((option) => (option.levels ? { ...option, levels: fullSkillPath(option.levels, option.order) } : option)) };
+}
+
 /** Entries per section that premium adds on top of the free tier. */
 export function lockedCounts(data: GuideData) {
   return Object.fromEntries(SECTIONS.map((section) => [section, Math.max(0, (data[section]?.length ?? 0) - FREE_COUNT[section])])) as Record<Section, number>;

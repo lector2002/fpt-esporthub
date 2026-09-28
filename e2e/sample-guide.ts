@@ -16,7 +16,8 @@ export const SAMPLE_GUIDE = {
     { ids: [4, 21], ...stat(5.4, 49.6, 6300) },
   ],
   skillOrder: [
-    { order: ["Q", "W", "E"], levels: ["Q", "W", "E", "Q", "Q", "R", "Q", "W", "Q", "W", "R", "W", "W", "E", "E", "R", "E", "E"], ...stat(82.4, 52.4, 96100) },
+    // Cut at 15 like op.gg; the API fills in R, E, E for 16-18.
+    { order: ["Q", "W", "E"], levels: ["Q", "W", "E", "Q", "Q", "R", "Q", "W", "Q", "W", "R", "W", "W", "E", "E"], ...stat(82.4, 52.4, 96100) },
     { order: ["Q", "E", "W"], ...stat(12.9, 50.2, 15040) },
   ],
   starterItems: [

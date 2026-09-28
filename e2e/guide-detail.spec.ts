@@ -49,6 +49,7 @@ test("a free player sees the most picked build and unlocks the rest with premium
   await expect(runes.locator("[data-rune-page]")).toBeVisible();
   await expect(runes.locator("[data-locked]")).toHaveAttribute("data-locked", "2");
   await expect(page.locator('[data-section="skills"] table').first()).toContainText("R");
+  await expect(page.locator('[data-section="skills"] table').first().locator("thead th").last()).toHaveText("18");
   await expect(page.locator('[data-section="matchups"] [data-option]')).toHaveCount(6);
   await expect(page.getByTestId("premium-card")).toContainText("4th to 6th items");
   await page.waitForLoadState("networkidle");

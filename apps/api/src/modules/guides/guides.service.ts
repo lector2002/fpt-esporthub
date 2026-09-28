@@ -3,7 +3,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { assertCanInteract } from "../../common/account";
 import { CreditsService } from "../credits/credits.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { type GuideData, POSITIONS, type Position, freeTier, lockedCounts } from "./guide-data";
+import { type GuideData, POSITIONS, type Position, freeTier, lockedCounts, withFullSkillPaths } from "./guide-data";
 import { PREMIUM_PASS, extendPremium, hasPremium } from "./premium";
 
 const SUMMARY_SELECT = { champion: true, position: true, patch: true, winRate: true, pickRate: true, banRate: true, fetchedAt: true } as const;
@@ -39,7 +39,7 @@ export class GuidesService {
     ]);
     if (!guide) throw new NotFoundException("Guide not found");
     const { data, ...header } = guide;
-    const full = data as unknown as GuideData;
+    const full = withFullSkillPaths(data as unknown as GuideData);
     const unlocked = hasPremium(user.premiumUntil);
     return {
       guide: header,

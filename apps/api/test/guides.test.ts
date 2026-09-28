@@ -1,6 +1,6 @@
 // Run: npm run test:api (from the repo root)
 import { strict as assert } from "node:assert";
-import { type GuideData, freeTier, isGuideData, lockedCounts } from "../src/modules/guides/guide-data";
+import { type GuideData, freeTier, fullSkillPath, isGuideData, lockedCounts } from "../src/modules/guides/guide-data";
 import { PREMIUM_PASS, extendPremium, hasPremium } from "../src/modules/guides/premium";
 
 let passed = 0;
@@ -70,6 +70,20 @@ test("premium runs from now, or from the current end while still active", () => 
   assert.equal(extendPremium(expired, now).getTime(), now.getTime() + days);
   assert.equal(hasPremium(expired, now), false);
   assert.equal(hasPremium(active, now), true);
+});
+
+const TO_15 = ["Q", "W", "E", "Q", "Q", "R", "Q", "E", "Q", "E", "R", "E", "E", "W", "W"];
+
+test("a path cut at 15 gets R at 16 and the unmaxed basic ability after it", () => {
+  const path = fullSkillPath(TO_15, ["Q", "E", "W"]);
+  assert.deepEqual(path.slice(0, TO_15.length), TO_15);
+  assert.deepEqual(path.slice(TO_15.length), ["R", "W", "W"]);
+});
+
+test("paths that break the usual ranks, or stop before 15, are left as they are", () => {
+  const rAtOne = ["R", ...TO_15.slice(1)];
+  assert.deepEqual(fullSkillPath(rAtOne, ["Q", "E", "W"]), rAtOne);
+  assert.deepEqual(fullSkillPath(TO_15.slice(0, 6), ["Q", "E", "W"]), TO_15.slice(0, 6));
 });
 
 console.log(`${passed} passed`);

@@ -2,7 +2,7 @@
 import { strict as assert } from "node:assert";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { isGuideData } from "../src/modules/guides/guide-data";
+import { fullSkillPath, isGuideData } from "../src/modules/guides/guide-data";
 import { nextRun } from "../src/modules/guides/guides-import";
 import { type LolIds, parseOpggBuild } from "../src/modules/guides/sources/opgg";
 
@@ -45,6 +45,14 @@ test("reads the max skill order and the per-level path", () => {
   assert.deepEqual(skills?.order, ["Q", "W", "E"]);
   assert.equal(skills?.levels?.length, 15);
   assert.deepEqual(skills?.levels?.slice(0, 6), ["W", "Q", "E", "Q", "Q", "R"]);
+});
+
+test("the op.gg path is completed to 18 with every ability at its max rank", () => {
+  const skills = guide!.data.skillOrder[0];
+  const path = fullSkillPath(skills.levels!, skills.order);
+  assert.equal(path.length, 18);
+  assert.equal(path[15], "R");
+  for (const [key, max] of Object.entries({ Q: 5, W: 5, E: 5, R: 3 })) assert.equal(path.filter((skill) => skill === key).length, max, key);
 });
 
 test("reads rune pages with keystone first, stat shards and the html win rate", () => {
