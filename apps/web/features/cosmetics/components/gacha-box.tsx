@@ -1,206 +1,173 @@
 "use client";
 
 import { useState } from "react";
-import { Backpack, Check, Coins, Gift, type LucideIcon, Percent, ShieldCheck, Sparkles } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Gem, Gift } from "lucide-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SpendButton } from "@/features/credits/components/spend-button";
 import { cn } from "@/lib/utils";
-import { type CosmeticItem, type CosmeticsShop, type Rarity, usePullGacha } from "../api";
-import { RARITY_LOOK } from "../looks";
+import { type CosmeticItem, type CosmeticsShop, type GachaBanner, type Rarity, usePullGacha } from "../api";
+import { GACHA_ART, PET_FX } from "../looks";
 import { type CosmeticsMessageKey, useCosmeticsMessages } from "../messages";
-import { RarityBadge } from "./cosmetic-parts";
+import { LimitedBadge } from "./cosmetic-parts";
+import { GachaInfo, type Share } from "./gacha-info";
 import { GachaStage } from "./gacha-stage";
-import { CosmeticPreview } from "./shop-item";
 
 /** Rarest first, like the shop lists. */
 const RARITY_ORDER: Rarity[] = ["epic", "rare", "common"];
-const HALL = "/cosmetics/gacha_hall.webp";
+const BIG = "h-12 w-full px-6 text-base sm:w-auto";
 
-type Share = { rarity: Rarity; rate: number; left: number; total: number };
+/** `?banner=` picks the banner so a limited one can be linked to; the standard box (first) is the default. */
+function useBanner(banners: GachaBanner[]) {
+  const router = useRouter();
+  const fromQuery = useSearchParams().get("banner");
+  const banner = banners.find((candidate) => candidate.id === fromQuery) ?? banners[0];
+  const setBanner = (id: string) => router.replace(id === banners[0].id ? "/shop" : `/shop?banner=${id}`, { scroll: false });
+  return [banner, setBanner] as const;
+}
 
-/** The mystery box tab: hero with the open button, drop rates, the rules, and everything the box can still give. */
+/** The mystery box tab: banner picker, then a big banner with open x1 / x10; rates and the pool sit behind Details. */
 export function GachaBox({ shop, name, avatarKey }: { shop: CosmeticsShop; name: string; avatarKey: string | null }) {
   const { t } = useCosmeticsMessages();
   const pull = usePullGacha();
-  const [won, setWon] = useState<CosmeticItem | null>(null);
+  const [banner, setBanner] = useBanner(shop.gacha.banners);
+  const [won, setWon] = useState<CosmeticItem[] | null>(null);
   const [open, setOpen] = useState(false);
   const [pulls, setPulls] = useState(0);
-  const { price, remaining, rates } = shop.gacha;
-  // The server's rates are over the items this player doesn't own, so the counts below use the same pool.
+  const [count, setCount] = useState(1);
+  const { price, batch } = shop.gacha;
+  const { remaining, rates } = banner;
+  const featured = shop.catalog.find((item) => item.id === banner.featured) ?? null;
+  const featuredName = featured ? t(featured.id as CosmeticsMessageKey) : "";
+  // The server's rates are over what this banner can still give the player, so the counts use the same pool.
   const shares: Share[] = RARITY_ORDER.map((rarity) => {
-    const items = shop.catalog.filter((item) => item.rarity === rarity);
+    const items = shop.catalog.filter((item) => item.rarity === rarity && !item.limited);
     return { rarity, rate: rates[rarity], total: items.length, left: items.filter((item) => !shop.owned.includes(item.id)).length };
   });
 
-  const openBox = () => {
+  const openBox = (n: number) => {
     setWon(null);
-    setPulls((n) => n + 1);
+    setCount(n);
+    setPulls((p) => p + 1);
     setOpen(true);
-    pull.mutate(undefined, {
-      onSuccess: ({ item }) => setWon(item),
-      onError: (error) => {
-        setOpen(false);
-        toast.error(error.message);
+    pull.mutate(
+      { banner: banner.id, count: n },
+      {
+        onSuccess: ({ items }) => setWon(items),
+        onError: (error) => {
+          setOpen(false);
+          toast.error(error.message);
+        },
       },
-    });
+    );
   };
 
-  const openButton = (
-    <SpendButton price={price} icon={Gift} label={t("gachaOpen")} confirmTitle={t("gachaConfirmTitle")} pending={pull.isPending} disabled={remaining === 0} onConfirm={openBox} />
+  const openButton = (n: number, className?: string) => (
+    <SpendButton
+      price={price * n}
+      icon={Gift}
+      label={t("gachaOpen", { count: n })}
+      confirmTitle={n === 1 ? t("gachaConfirmTitle") : t("gachaConfirmBatch", { count: n })}
+      pending={pull.isPending}
+      disabled={remaining < n}
+      onConfirm={() => openBox(n)}
+      className={className}
+    />
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <section aria-labelledby="gacha-title" className="relative isolate overflow-hidden rounded-xl bg-[#1a120b] ring-1 ring-foreground/10" data-testid="gacha">
-        <img src={HALL} alt="" aria-hidden className="absolute inset-0 -z-10 size-full object-cover object-[70%_50%]" />
-        <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/60 to-black/10 sm:bg-linear-to-r sm:from-black/85 sm:via-black/55 sm:to-black/0" aria-hidden />
-        <div className="flex min-h-96 flex-col justify-end gap-4 p-6 text-white sm:p-8 lg:max-w-xl lg:justify-center">
-          <span className="flex items-center gap-1.5 text-sm font-medium text-amber-200">
-            <Sparkles className="size-4" aria-hidden /> {t("gachaPerOpen", { price })}
-          </span>
-          <h2 id="gacha-title" className="text-3xl font-bold sm:text-4xl">
-            {t("gachaTitle")}
-          </h2>
-          <p className="text-white/80 sm:text-lg">{t("gachaHint")}</p>
-          {remaining > 0 && (
-            <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm" aria-label={t("gachaRates")}>
-              {shares
-                .filter((share) => share.rate > 0)
-                .map((share) => (
-                  <li key={share.rarity} className="flex items-center gap-1.5">
-                    <RarityBadge rarity={share.rarity} />
-                    <span className="font-semibold tabular-nums">{share.rate}%</span>
-                  </li>
-                ))}
-            </ul>
+    <div className="flex flex-col gap-4">
+      <BannerPicker banners={shop.gacha.banners} selected={banner.id} onSelect={setBanner} />
+
+      <section aria-labelledby="gacha-title" className="relative isolate overflow-hidden rounded-2xl bg-[#1a120b] ring-1 ring-foreground/10" data-testid="gacha" data-banner-id={banner.id}>
+        <img key={banner.id} src={GACHA_ART[banner.id]?.bg} alt="" aria-hidden className="absolute inset-0 -z-10 size-full object-cover object-[68%_50%] animate-in fade-in duration-500" />
+        <div className="absolute inset-0 -z-10 bg-linear-to-t from-black/90 via-black/35 to-black/0" aria-hidden />
+        <div className="absolute inset-0 -z-10 hidden bg-linear-to-r from-black/60 via-black/10 to-black/0 sm:block" aria-hidden />
+        {featured && GACHA_ART[banner.id]?.featured && (
+          <span
+            role="img"
+            aria-label={featuredName}
+            className={cn("pet-sprite absolute top-14 right-[8%] h-32 sm:top-auto sm:right-[18%] sm:bottom-[26%] sm:h-60 lg:h-72", PET_FX[featured.id], rates.limited === 0 && "opacity-60 grayscale")}
+            style={{ backgroundImage: `url(${GACHA_ART[banner.id].featured})` }}
+          />
+        )}
+        <div className="absolute top-4 left-4 flex items-center gap-2">
+          {featured && (
+            <>
+              <LimitedBadge className="text-xs" />
+              {rates.limited > 0 && <span className="rounded-md bg-black/50 px-2 py-0.5 text-xs font-semibold text-amber-200 tabular-nums backdrop-blur">{rates.limited}%</span>}
+            </>
           )}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            {openButton}
-            <span className="text-sm text-white/75">{remaining > 0 ? t("gachaLeft", { count: remaining }) : t("gachaDone")}</span>
+        </div>
+        <GachaInfo shop={shop} banner={banner} shares={shares} featured={featured} name={name} avatarKey={avatarKey} className="absolute top-4 right-4" />
+        <div className="flex min-h-[34rem] flex-col justify-end gap-5 p-6 text-white sm:min-h-[36rem] sm:p-10 lg:min-h-[40rem]">
+          <div className="flex max-w-xl flex-col gap-3">
+            <h2 id="gacha-title" className="text-4xl font-bold tracking-tight sm:text-6xl">
+              {featured ? t("gachaLimitedTitle", { pet: featuredName }) : t("gachaTitle")}
+            </h2>
+            <p className="text-white/80 sm:text-lg">
+              {!featured ? t("gachaHint") : rates.limited > 0 ? t("gachaLimitedHint", { pet: featuredName, rate: rates.limited }) : t("gachaLimitedOwned", { pet: featuredName })}
+            </p>
           </div>
+          <div className="grid gap-4 sm:flex sm:items-end">
+            {openButton(1, BIG)}
+            <div className="relative pt-3 sm:pt-0">
+              <span
+                className={cn(
+                  "absolute -top-0.5 left-3 z-10 flex items-center gap-1 rounded-md bg-sky-500 px-2 py-0.5 text-xs font-semibold text-white shadow sm:-top-3.5",
+                  remaining < batch && "hidden",
+                )}
+              >
+                <Gem className="size-3.5" aria-hidden /> {t("gachaGuarantee")}
+              </span>
+              {openButton(batch, cn(BIG, "sm:h-14 sm:px-8 sm:text-lg"))}
+            </div>
+          </div>
+          <p className="text-sm text-white/75">
+            {remaining === 0 ? t("gachaDone") : remaining < batch ? `${t("gachaLeft", { count: remaining })} · ${t("gachaBatchNeeds", { count: batch })}` : t("gachaLeft", { count: remaining })}
+          </p>
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <RatesCard shares={shares} />
-        <RulesCard price={price} />
-      </div>
-
-      <PoolSection shop={shop} shares={shares} name={name} avatarKey={avatarKey} />
-
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="overflow-hidden sm:max-w-sm">
-          <GachaStage key={pulls} item={won} name={name} avatarKey={avatarKey} again={remaining > 0 && openButton} onDone={() => setOpen(false)} />
+        <DialogContent className={count > 1 ? "max-h-[90svh] overflow-x-hidden overflow-y-auto sm:max-w-3xl" : "overflow-hidden sm:max-w-sm"}>
+          <GachaStage key={pulls} items={won} name={name} avatarKey={avatarKey} again={remaining >= count && openButton(count)} onDone={() => setOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>
   );
 }
 
-function RatesCard({ shares }: { shares: Share[] }) {
+/** One thumbnail per banner; limited ones carry the badge. */
+function BannerPicker({ banners, selected, onSelect }: { banners: GachaBanner[]; selected: string; onSelect: (id: string) => void }) {
   const { t } = useCosmeticsMessages();
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("gachaRates")}</CardTitle>
-        <CardDescription>{t("gachaRuleRates")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("gachaRarity")}</TableHead>
-              <TableHead className="text-right">{t("gachaChance")}</TableHead>
-              <TableHead className="text-right">{t("gachaItemsLeft")}</TableHead>
-              <TableHead className="text-right">{t("gachaPerItem")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shares.map((share) => (
-              <TableRow key={share.rarity} data-rarity={share.rarity}>
-                <TableCell>
-                  <RarityBadge rarity={share.rarity} />
-                </TableCell>
-                <TableCell className="text-right font-semibold tabular-nums">{share.rate}%</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {share.left}/{share.total}
-                </TableCell>
-                <TableCell className="text-right text-muted-foreground tabular-nums">{share.left > 0 ? `${(share.rate / share.left).toFixed(2)}%` : "–"}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-}
-
-function RulesCard({ price }: { price: number }) {
-  const { t } = useCosmeticsMessages();
-  const rules: { icon: LucideIcon; text: string }[] = [
-    { icon: Coins, text: t("gachaRuleCost", { price }) },
-    { icon: ShieldCheck, text: t("gachaRuleNoDupes") },
-    { icon: Percent, text: t("gachaRuleRates") },
-    { icon: Backpack, text: t("gachaRuleLocker") },
-  ];
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("gachaRulesTitle")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="flex flex-col gap-3">
-          {rules.map(({ icon: Icon, text }) => (
-            <li key={text} className="flex gap-3 text-sm">
-              <Icon className="mt-0.5 size-4 shrink-0 text-coin" aria-hidden />
-              <span>{text}</span>
+    <div className="-mx-4 overflow-x-auto overflow-y-hidden px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:px-1">
+      <ul className="flex w-max gap-3" aria-label={t("gachaBanners")}>
+        {banners.map((banner) => {
+          const active = banner.id === selected;
+          const label = banner.featured ? t("gachaLimitedTitle", { pet: t(banner.featured as CosmeticsMessageKey) }) : t("gachaTitle");
+          return (
+            <li key={banner.id}>
+              <button
+                type="button"
+                aria-pressed={active}
+                onClick={() => onSelect(banner.id)}
+                className={cn(
+                  "relative isolate flex h-20 w-44 items-end overflow-hidden rounded-xl p-2.5 text-left text-sm font-semibold text-white ring-1 ring-foreground/10 transition sm:h-24 sm:w-56",
+                  active ? "ring-2 ring-coin" : "opacity-70 hover:opacity-100",
+                )}
+              >
+                <img src={GACHA_ART[banner.id]?.bg} alt="" aria-hidden className="absolute inset-0 -z-10 size-full object-cover" />
+                <span className="absolute inset-0 -z-10 bg-linear-to-t from-black/80 to-black/0" aria-hidden />
+                {banner.featured && <LimitedBadge className="absolute top-2 left-2" />}
+                <span className="truncate">{label}</span>
+              </button>
             </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
-  );
-}
-
-/** Every item in the box by rarity; owned ones are faded because they can't drop again. */
-function PoolSection({ shop, shares, name, avatarKey }: { shop: CosmeticsShop; shares: Share[]; name: string; avatarKey: string | null }) {
-  const { t } = useCosmeticsMessages();
-  return (
-    <section className="flex flex-col gap-4" aria-labelledby="gacha-pool">
-      <div>
-        <h2 id="gacha-pool" className="font-semibold">
-          {t("gachaPoolTitle")}
-        </h2>
-        <p className="text-sm text-muted-foreground">{t("gachaPoolHint")}</p>
-      </div>
-      {shares.map((share) => (
-        <div key={share.rarity} className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <RarityBadge rarity={share.rarity} />
-            <span className="text-xs text-muted-foreground tabular-nums">{t("gachaLeft", { count: share.left })}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
-            {shop.catalog
-              .filter((item) => item.rarity === share.rarity)
-              .map((item) => {
-                const owned = shop.owned.includes(item.id);
-                return (
-                  <div key={item.id} className={cn("overflow-hidden rounded-lg border border-border bg-card", RARITY_LOOK[item.rarity].tile, owned && "opacity-40")} data-pool-item={item.id}>
-                    <CosmeticPreview item={item} name={name} avatarKey={avatarKey} />
-                    <div className="flex items-center gap-1.5 px-3 pt-2">
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{t(item.id as CosmeticsMessageKey)}</span>
-                      {owned && <Check className="size-4 shrink-0 text-muted-foreground" aria-label={t("alreadyOwned")} />}
-                    </div>
-                    <p className="px-3 pb-2 text-xs text-muted-foreground">{t(`kind_${item.kind}`)}</p>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-      ))}
-    </section>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

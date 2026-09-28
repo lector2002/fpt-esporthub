@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 import { type CosmeticItem, type Rarity, useEquipCosmetic } from "../api";
 import { RARITY_LOOK } from "../looks";
 import { type CosmeticsMessageKey, useCosmeticsMessages } from "../messages";
-import { RarityBadge } from "./cosmetic-parts";
-import { CosmeticPreview } from "./shop-item";
+import { LimitedBadge, RarityBadge } from "./cosmetic-parts";
+import { CosmeticPreview, byRarity } from "./shop-item";
 
 const CHEST = { closed: "/cosmetics/chest_closed.webp", open: "/cosmetics/chest_open.webp" };
 
@@ -29,27 +29,53 @@ const SPARK_COLORS: Record<Rarity, string[]> = {
 
 type Phase = "waiting" | "charging" | "burst" | "reveal";
 
+const RANK: Record<Rarity, number> = { common: 0, rare: 1, epic: 2 };
+const bestRarity = (items: CosmeticItem[]) => items.reduce<Rarity>((best, item) => (RANK[item.rarity] > RANK[best] ? item.rarity : best), "common");
+
 /**
- * The opening in the gacha dialog: the chest rumbles until the pull returns, then charges up in the rarity's color
- * with light leaking from the lid, bursts open (flash, shockwaves, beam, sparks, rays) and the item rises out of it.
+ * The opening in the gacha dialog: the chest rumbles until the pull returns, then charges up in the color of the best
+ * rarity with light leaking from the lid, bursts open (flash, shockwaves, beam, sparks, rays) and the item rises out of
+ * it. A batch deals all its items out in a grid instead, rarest first.
  */
-export function GachaStage({ item, name, avatarKey, again, onDone }: { item: CosmeticItem | null; name: string; avatarKey: string | null; again: React.ReactNode; onDone: () => void }) {
+export function GachaStage({ items, name, avatarKey, again, onDone }: { items: CosmeticItem[] | null; name: string; avatarKey: string | null; again: React.ReactNode; onDone: () => void }) {
   const { t } = useCosmeticsMessages();
   const [phase, setPhase] = useState<Phase>("waiting");
+  const rarity = items ? bestRarity(items) : "common";
 
   useEffect(() => {
-    if (!item) return;
+    if (!items) return;
     setPhase("charging");
-    const burst = setTimeout(() => setPhase("burst"), CHARGE_MS[item.rarity]);
-    const reveal = setTimeout(() => setPhase("reveal"), CHARGE_MS[item.rarity] + BURST_MS);
+    const burst = setTimeout(() => setPhase("burst"), CHARGE_MS[rarity]);
+    const reveal = setTimeout(() => setPhase("reveal"), CHARGE_MS[rarity] + BURST_MS);
     return () => {
       clearTimeout(burst);
       clearTimeout(reveal);
     };
-  }, [item]);
+  }, [items, rarity]);
 
-  const rarity = item?.rarity ?? "common";
   const opened = phase === "burst" || phase === "reveal";
+  const item = items?.length === 1 ? items[0] : null;
+  const batch = items && items.length > 1 ? items : null;
+
+  if (phase === "reveal" && batch) {
+    return (
+      <>
+        <DialogHeader className="items-center text-center animate-in fade-in duration-500">
+          <DialogDescription>{t("gachaTitle")}</DialogDescription>
+          <DialogTitle className="text-xl" data-testid="gacha-won-count">
+            {t("gachaGotCount", { count: batch.length })}
+          </DialogTitle>
+        </DialogHeader>
+        <BatchReveal items={batch} rarity={rarity} name={name} avatarKey={avatarKey} />
+        <DialogFooter className="sm:justify-center animate-in fade-in delay-700 duration-500 fill-mode-both">
+          {again}
+          <Button variant="outline" onClick={onDone}>
+            <Check /> {t("gachaClose")}
+          </Button>
+        </DialogFooter>
+      </>
+    );
+  }
 
   return (
     <>
@@ -168,6 +194,33 @@ function Twinkles({ rarity }: { rarity: Rarity }) {
   );
 }
 
+/** The batch prizes, rarest first, each rising in turn over the best rarity's glow. */
+function BatchReveal({ items, rarity, name, avatarKey }: { items: CosmeticItem[]; rarity: Rarity; name: string; avatarKey: string | null }) {
+  const { t } = useCosmeticsMessages();
+  return (
+    <div className="relative -mx-6 overflow-hidden px-6 py-2" style={{ ["--gacha-rgb" as string]: LIGHT[rarity] }}>
+      <div className="gacha-glow absolute inset-0 bg-radial from-[rgb(var(--gacha-rgb)/0.45)] to-transparent to-70%" aria-hidden />
+      <Twinkles rarity={rarity} />
+      <ul className="relative grid grid-cols-2 gap-3 sm:grid-cols-5" data-testid="gacha-batch">
+        {[...items].sort(byRarity).map((prize, i) => (
+          <li
+            key={prize.id}
+            className={cn("gacha-deal overflow-hidden rounded-lg border border-border bg-card shadow-lg", RARITY_LOOK[prize.rarity].tile)}
+            style={{ animationDelay: `${i * 90}ms` }}
+            data-gacha-item={prize.id}
+          >
+            <CosmeticPreview item={prize} name={name} avatarKey={avatarKey} />
+            <div className="flex flex-col items-start gap-1 px-2.5 py-2">
+              <span className="w-full truncate text-sm font-medium">{t(prize.id as CosmeticsMessageKey)}</span>
+              {prize.limited ? <LimitedBadge /> : <RarityBadge rarity={prize.rarity} />}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function RevealHeader({ item }: { item: CosmeticItem }) {
   const { t } = useCosmeticsMessages();
   return (
@@ -178,6 +231,7 @@ function RevealHeader({ item }: { item: CosmeticItem }) {
       </DialogTitle>
       <div className="flex items-center gap-2">
         <RarityBadge rarity={item.rarity} />
+        {item.limited && <LimitedBadge />}
         <span className="text-xs text-muted-foreground">{t(`kind_${item.kind}`)}</span>
       </div>
     </DialogHeader>

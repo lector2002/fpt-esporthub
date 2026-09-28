@@ -59,7 +59,8 @@ export function ShopScreen() {
       <QueryState query={shop} skeleton={<ListSkeleton rows={4} />}>
         {(data) => (
           <Tabs value={tab} onValueChange={setTab} className="gap-6">
-            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            {/* overflow-x alone makes the y axis scroll too (the active tab's underline pokes out), so both are set. */}
+            <div className="-mx-4 overflow-x-auto overflow-y-hidden px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
               <TabsList variant="line" className="w-max justify-start">
                 <TabsTrigger value={GACHA}>
                   <Gift /> {t("gachaTitle")}
@@ -102,7 +103,15 @@ function KindSection({ kind, shop, name, avatarKey }: { kind: CosmeticKind; shop
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {items.map((item) => (
-          <ShopItem key={item.id} item={item} owned={shop.owned.includes(item.id)} equipped={shop.equipped} name={name} avatarKey={avatarKey} />
+          <ShopItem
+            key={item.id}
+            item={item}
+            owned={shop.owned.includes(item.id)}
+            equipped={shop.equipped}
+            name={name}
+            avatarKey={avatarKey}
+            bannerId={shop.gacha.banners.find((banner) => banner.featured === item.id)?.id}
+          />
         ))}
       </div>
     </section>

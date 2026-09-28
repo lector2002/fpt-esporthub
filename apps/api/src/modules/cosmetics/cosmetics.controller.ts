@@ -3,6 +3,7 @@ import { IsIn, IsOptional, IsString, Length } from "class-validator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { COSMETIC_KINDS, type CosmeticKind } from "./catalog";
 import { CosmeticsService } from "./cosmetics.service";
+import { GACHA_BANNERS, GACHA_BATCH } from "./gacha";
 
 type AuthedRequest = { user: { id: string } };
 
@@ -16,6 +17,16 @@ class EquipCosmeticDto {
   itemId?: string | null;
 }
 
+class PullGachaDto {
+  @IsOptional()
+  @IsIn(GACHA_BANNERS.map((banner) => banner.id))
+  banner?: string;
+
+  @IsOptional()
+  @IsIn([1, GACHA_BATCH])
+  count?: number;
+}
+
 @Controller("cosmetics")
 @UseGuards(JwtAuthGuard)
 export class CosmeticsController {
@@ -27,8 +38,8 @@ export class CosmeticsController {
   }
 
   @Post("gacha/pull")
-  pull(@Request() req: AuthedRequest) {
-    return this.cosmetics.pull(req.user.id);
+  pull(@Request() req: AuthedRequest, @Body() dto: PullGachaDto) {
+    return this.cosmetics.pull(req.user.id, dto.banner ?? "standard", dto.count ?? 1);
   }
 
   @Post(":itemId/buy")

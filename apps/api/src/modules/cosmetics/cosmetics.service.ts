@@ -5,7 +5,7 @@ import { isDuplicateRef } from "../credits/credit-ledger";
 import { CreditsService } from "../credits/credits.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { COSMETICS, EQUIPPED_FIELD, EQUIPPED_SELECT, type CosmeticKind, findCosmetic, toCosmeticsView } from "./catalog";
-import { GACHA_PRICE, gachaRates, pickFromPool } from "./gacha";
+import { GACHA_BANNERS, GACHA_BATCH, GACHA_PRICE, bannerPool, gachaRates, pickBatch } from "./gacha";
 
 @Injectable()
 export class CosmeticsService {
@@ -20,13 +20,16 @@ export class CosmeticsService {
       this.prisma.userCosmetic.findMany({ where: { userId }, select: { itemId: true } }),
     ]);
     const owned = rows.map((row) => row.itemId).filter((id) => findCosmetic(id));
-    const pool = COSMETICS.filter((item) => !owned.includes(item.id));
+    const banners = GACHA_BANNERS.map((banner) => {
+      const pool = bannerPool(banner, owned);
+      return { id: banner.id, featured: banner.featured, remaining: pool.length, rates: gachaRates(pool) };
+    });
     return {
       catalog: COSMETICS,
       owned,
       equipped: toCosmeticsView(user),
       balance: user.creditBalance,
-      gacha: { price: GACHA_PRICE, remaining: pool.length, rates: gachaRates(pool) },
+      gacha: { price: GACHA_PRICE, batch: GACHA_BATCH, banners },
     };
   }
 
@@ -34,6 +37,7 @@ export class CosmeticsService {
   async buy(userId: string, itemId: string) {
     const item = findCosmetic(itemId);
     if (!item) throw new NotFoundException("Item not found");
+    if (item.limited) throw new BadRequestException("This item only drops from its limited banner");
     await assertCanInteract(this.prisma, userId);
     await this.prisma.$transaction(async (tx) => {
       const owned = await tx.userCosmetic.findUnique({ where: { userId_itemId: { userId, itemId } }, select: { id: true } });
@@ -47,22 +51,28 @@ export class CosmeticsService {
     return this.getMine(userId);
   }
 
-  /** Mystery box: a random item the player doesn't own yet, never a duplicate. Not equipped; the reveal offers that. */
-  async pull(userId: string) {
+  /**
+   * Mystery box: `count` random items (1 or a batch) from the banner's pool that the player doesn't own yet, never a
+   * duplicate. Not equipped; the reveal offers that. A batch holds a rare or better while the box has one (`pickBatch`).
+   */
+  async pull(userId: string, bannerId: string, count: number) {
+    const banner = GACHA_BANNERS.find((candidate) => candidate.id === bannerId);
+    if (!banner) throw new NotFoundException("Banner not found");
     await assertCanInteract(this.prisma, userId);
     try {
-      const item = await this.prisma.$transaction(async (tx) => {
+      const items = await this.prisma.$transaction(async (tx) => {
         const rows = await tx.userCosmetic.findMany({ where: { userId }, select: { itemId: true } });
-        const pool = COSMETICS.filter((candidate) => !rows.some((row) => row.itemId === candidate.id));
-        const picked = pickFromPool(pool, randomInt);
-        if (!picked) throw new ConflictException("You already own everything in the box");
-        await this.credits.apply({ userId, amount: -GACHA_PRICE, kind: "COSMETIC", ref: `gacha:${randomUUID()}`, note: `gacha ${picked.id}` }, tx);
+        const pool = bannerPool(banner, rows.map((row) => row.itemId));
+        const picked = pickBatch(pool, count, randomInt);
+        if (!picked) throw new ConflictException(pool.length === 0 ? "You already own everything in the box" : `Only ${pool.length} items are left in the box`);
+        const note = `gacha ${banner.id} ${picked.map((item) => item.id).join(" ")}`;
+        await this.credits.apply({ userId, amount: -GACHA_PRICE * count, kind: "COSMETIC", ref: `gacha:${randomUUID()}`, note }, tx);
         // Unique (userId, itemId): a concurrent pull that drew the same item rolls this one back, credits included.
-        await tx.userCosmetic.create({ data: { userId, itemId: picked.id } });
+        await tx.userCosmetic.createMany({ data: picked.map((item) => ({ userId, itemId: item.id })) });
         return picked;
       });
       this.credits.notifyBalance(userId);
-      return { item, shop: await this.getMine(userId) };
+      return { items, shop: await this.getMine(userId) };
     } catch (error) {
       if (isDuplicateRef(error)) throw new ConflictException("Another pull just finished, try again");
       throw error;

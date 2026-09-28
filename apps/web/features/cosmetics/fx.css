@@ -270,6 +270,10 @@
 .gacha-rise {
   animation: gacha-rise 0.7s cubic-bezier(0.3, 1.4, 0.5, 1) both, gacha-bob 2.8s ease-in-out 0.7s infinite;
 }
+/* A batch deals its prizes out one after another (delay set inline) and they stay still. */
+.gacha-deal {
+  animation: gacha-rise 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
 
 /* The walking pet (pet-walker.tsx) and the gacha opening (gacha-*) are exempt: equipping a pet and opening a box are
    the player asking for the motion. */

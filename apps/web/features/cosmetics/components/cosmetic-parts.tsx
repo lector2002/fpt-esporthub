@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, Circle, Crown, Gem, type LucideIcon } from "lucide-react";
+import { Award, Circle, Crown, Gem, type LucideIcon, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Rarity } from "../api";
 import { BANNER_LOOK, CARD_ART, CARD_LOOK, FRAME_ART, FRAME_LOOK, NAME_COLOR_LOOK, PET_FX, PET_SPRITE, RARITY_LOOK, TITLE_TIER } from "../looks";
@@ -95,6 +95,17 @@ export function RarityBadge({ rarity, className }: { rarity: Rarity; className?:
     <span className={cn("inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide", RARITY_LOOK[rarity].badge, className)} data-rarity={rarity}>
       <Icon className={cn("size-3", rarity === "common" && "size-2 fill-current")} aria-hidden />
       {t(`rarity_${rarity}`)}
+    </span>
+  );
+}
+
+/** Marks an item that only drops from its limited gacha banner. */
+export function LimitedBadge({ className }: { className?: string }) {
+  const { t } = useCosmeticsMessages();
+  return (
+    <span className={cn("inline-flex w-fit items-center gap-1 rounded-full bg-linear-to-r from-amber-300 to-yellow-500 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-950", className)} data-limited>
+      <Sparkles className="size-3" aria-hidden />
+      {t("gachaLimited")}
     </span>
   );
 }

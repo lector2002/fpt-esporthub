@@ -11,8 +11,12 @@ const WIDTH = Math.round((HEIGHT * 89) / 96);
 const SPEED = 80;
 const REST_MS: [number, number] = [900, 2600];
 const STOP_EARLY = 0.45;
-/** Seconds per frame: the run cycle plays fast so the legs keep up with the ground, tricks a bit slower. */
-const WALK = { frames: 8, frameS: 0.1 };
+/**
+ * Seconds per frame: the run cycle plays fast so the legs keep up with the ground, tricks a bit slower. Run frames are
+ * wider (134x96 against 89x96) because the runs were scaled up to the idle height and a stretched-out run needs room.
+ */
+const WALK = { frames: 8, frameS: 0.1, width: 134 };
+const WALK_WIDTH = Math.round((HEIGHT * WALK.width) / 96);
 const IDLE_FRAME_S = 0.2;
 const TRICK_FRAME_S = 0.15;
 
@@ -108,6 +112,8 @@ export function PetWalker({ aboveTabBar }: { aboveTabBar: boolean }) {
         className={cn("pet-sprite pet-walk block", PET_FX[pet])}
         style={{
           height: HEIGHT,
+          // The wider run box stays centered on the same spot, so the pet doesn't hop sideways when it starts running.
+          ...(walking && { aspectRatio: `${WALK.width} / 96`, marginLeft: (WIDTH - WALK_WIDTH) / 2 }),
           backgroundImage: `url(${move.src})`,
           ["--pet-frames" as string]: move.frames,
           ["--pet-frame-s" as string]: `${move.frameS}s`,

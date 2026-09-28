@@ -2,7 +2,7 @@
 import { strict as assert } from "node:assert";
 import { existsSync, readFileSync } from "node:fs";
 import { COSMETICS, COSMETIC_KINDS, EQUIPPED_FIELD, findCosmetic, toCosmeticsView, type CosmeticItem } from "../src/modules/cosmetics/catalog";
-import { RARITY_WEIGHT, gachaRates, pickFromPool } from "../src/modules/cosmetics/gacha";
+import { GACHA_BANNERS, GACHA_BATCH, LIMITED_ODDS, RARITY_WEIGHT, bannerPool, gachaRates, pickBatch, pickFromPool, pickOne } from "../src/modules/cosmetics/gacha";
 
 let passed = 0;
 function test(name: string, fn: () => void) {
@@ -74,9 +74,9 @@ const rare: CosmeticItem = { id: "test_rare", kind: "frame", credits: 30, rarity
 const epic: CosmeticItem = { id: "test_epic", kind: "frame", credits: 30, rarity: "epic" };
 
 test("gacha rates split only between rarities left in the pool", () => {
-  assert.deepEqual(gachaRates([...common, rare, epic]), { common: RARITY_WEIGHT.common, rare: RARITY_WEIGHT.rare, epic: RARITY_WEIGHT.epic });
-  assert.deepEqual(gachaRates(common), { common: 100, rare: 0, epic: 0 });
-  assert.deepEqual(gachaRates([]), { common: 0, rare: 0, epic: 0 });
+  assert.deepEqual(gachaRates([...common, rare, epic]), { common: RARITY_WEIGHT.common, rare: RARITY_WEIGHT.rare, epic: RARITY_WEIGHT.epic, limited: 0 });
+  assert.deepEqual(gachaRates(common), { common: 100, rare: 0, epic: 0, limited: 0 });
+  assert.deepEqual(gachaRates([]), { common: 0, rare: 0, epic: 0, limited: 0 });
 });
 
 test("gacha picks by rarity weight, then evenly within the rarity", () => {
@@ -93,6 +93,65 @@ test("gacha picks by rarity weight, then evenly within the rarity", () => {
 
 test("gacha has nothing to give once the pool is empty", () => {
   assert.equal(pickFromPool([], () => 0), null);
+});
+
+const commons = COSMETICS.filter((item) => item.rarity === "common");
+/** Always rolls the lowest ticket, so every pick is the first common left unless the guarantee steps in. */
+const lowest = () => 0;
+
+test("a batch whose other picks are all common ends with a rare or better", () => {
+  const batch = pickBatch([...commons, rare, epic], GACHA_BATCH, lowest)!;
+  assert.equal(new Set(batch.map((item) => item.id)).size, GACHA_BATCH);
+  assert.ok(batch.slice(0, -1).every((item) => item.rarity === "common"));
+  assert.equal(batch.at(-1)!.id, rare.id);
+});
+
+test("a batch that already drew a rare is not pushed further", () => {
+  const queue = [RARITY_WEIGHT.common, 0];
+  const batch = pickBatch([...commons, rare, epic], GACHA_BATCH, (max) => Math.min(queue.shift() ?? 0, max - 1))!;
+  assert.equal(batch[0].id, rare.id);
+  assert.equal(batch.filter((item) => item.rarity !== "common").length, 1);
+});
+
+test("a single pull gets no guarantee", () => {
+  assert.equal(pickBatch([...commons, rare, epic], 1, lowest)?.[0].rarity, "common");
+});
+
+test("a batch stays common when the box has no rare left, and needs enough items", () => {
+  assert.ok(pickBatch(commons, GACHA_BATCH, lowest)!.every((item) => item.rarity === "common"));
+  assert.equal(pickBatch(commons.slice(0, GACHA_BATCH - 1), GACHA_BATCH, lowest), null);
+});
+
+const limitedBanners = GACHA_BANNERS.filter((banner) => banner.featured);
+
+test("limited items are only in their own banner's pool", () => {
+  const standard = bannerPool(GACHA_BANNERS[0], []);
+  assert.ok(standard.every((item) => !item.limited));
+  assert.ok(limitedBanners.length > 0);
+  for (const banner of limitedBanners) {
+    const pool = bannerPool(banner, []);
+    assert.deepEqual(pool.filter((item) => item.limited).map((item) => item.id), [banner.featured]);
+    assert.equal(pool.length, standard.length + 1);
+    assert.equal(bannerPool(banner, [banner.featured]).length, standard.length);
+  }
+});
+
+test("a limited banner shows its item at 1 in LIMITED_ODDS and the rates still add up to 100", () => {
+  const pool = bannerPool(limitedBanners[0], []);
+  const rates = gachaRates(pool);
+  assert.equal(rates.limited, 100 / LIMITED_ODDS);
+  assert.equal(Math.round((rates.common + rates.rare + rates.epic + rates.limited) * 10), 1000);
+});
+
+test("the limited item drops only on the lowest ticket, or once nothing else is left", () => {
+  const pool = bannerPool(limitedBanners[0], []);
+  const featured = limitedBanners[0].featured;
+  assert.equal(pickOne(pool, () => 0)?.id, featured);
+  for (const ticket of [1, 2, LIMITED_ODDS - 1]) {
+    const queue = [ticket];
+    assert.notEqual(pickOne(pool, (max) => Math.min(queue.shift() ?? 0, max - 1))?.id, featured);
+  }
+  assert.equal(pickOne(pool.filter((item) => item.limited), () => LIMITED_ODDS - 1)?.id, featured);
 });
 
 console.log(`${passed} passed`);

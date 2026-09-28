@@ -87,6 +87,8 @@ export const PET_SPRITE: Record<string, string> = {
   pet_noctcrow: "/pets/noctcrow.webp",
   pet_crystolotl: "/pets/crystolotl.webp",
   pet_solara: "/pets/solara.webp",
+  pet_goldenleader: "/pets/goldenleader.webp",
+  pet_hiyuki: "/pets/hiyuki.webp",
 };
 
 export const PET_FX: Record<string, string> = {
@@ -96,6 +98,8 @@ export const PET_FX: Record<string, string> = {
   pet_noctcrow: "fx-pet-halo [--fx-glow:rgb(196_181_253/0.85)]",
   pet_crystolotl: "fx-pet-halo [--fx-glow:rgb(249_168_212/0.85)]",
   pet_solara: "fx-pet-sparkle [--fx-glow:rgb(251_146_60/0.9)]",
+  pet_goldenleader: "fx-pet-sparkle [--fx-glow:rgb(250_204_21/0.9)]",
+  pet_hiyuki: "fx-pet-sparkle [--fx-glow:rgb(125_211_252/0.9)]",
 };
 
 /** Rarity badge, shop tile edge, and the glow and rays behind a gacha reveal. */
@@ -115,4 +119,11 @@ export const RARITY_LOOK: Record<"common" | "rare" | "epic", { badge: string; ti
     glow: "from-fuchsia-500/60",
     rays: "fx-rays [--fx-ray:rgb(217_70_239/0.38)]",
   },
+};
+
+/** Gacha banner backgrounds, and for limited banners the full-size idle strip of the featured item shown on it. */
+export const GACHA_ART: Record<string, { bg: string; featured?: string }> = {
+  standard: { bg: "/cosmetics/gacha_hall.webp" },
+  limited_goldenleader: { bg: "/cosmetics/gacha_goldenleader.webp", featured: "/pets/goldenleader-hd.webp" },
+  limited_hiyuki: { bg: "/cosmetics/gacha_hiyuki.webp", featured: "/pets/hiyuki-hd.webp" },
 };

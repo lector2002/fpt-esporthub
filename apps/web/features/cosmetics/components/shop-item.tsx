@@ -1,6 +1,7 @@
 "use client";
 
-import { Check } from "lucide-react";
+import Link from "next/link";
+import { Check, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { type CosmeticItem, type Rarity, useBuyCosmetic, useEquipCosmetic } from "../api";
 import { RARITY_LOOK } from "../looks";
 import { type CosmeticsMessageKey, useCosmeticsMessages } from "../messages";
-import { CardDecoration, CosmeticBanner, CosmeticFrame, CosmeticPet, CosmeticTitle, RarityBadge, cardLookClass, nameColorClass } from "./cosmetic-parts";
+import { CardDecoration, CosmeticBanner, CosmeticFrame, CosmeticPet, CosmeticTitle, LimitedBadge, RarityBadge, cardLookClass, nameColorClass } from "./cosmetic-parts";
 
 export const KINDS: CosmeticKind[] = ["pet", "frame", "banner", "nameColor", "title", "card"];
 
@@ -21,7 +22,8 @@ const RARITY_RANK: Record<Rarity, number> = { epic: 0, rare: 1, common: 2 };
 /** Epic first, then rare, then common. */
 export const byRarity = (a: CosmeticItem, b: CosmeticItem) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity];
 
-export function ShopItem({ item, owned, equipped, name, avatarKey }: { item: CosmeticItem; owned: boolean; equipped: CosmeticsView; name: string; avatarKey: string | null }) {
+/** `bannerId`: the limited banner a limited item drops from, linked instead of a price. */
+export function ShopItem({ item, owned, equipped, name, avatarKey, bannerId }: { item: CosmeticItem; owned: boolean; equipped: CosmeticsView; name: string; avatarKey: string | null; bannerId?: string }) {
   const { t } = useCosmeticsMessages();
   const buy = useBuyCosmetic();
   const equip = useEquipCosmetic();
@@ -40,6 +42,7 @@ export function ShopItem({ item, owned, equipped, name, avatarKey }: { item: Cos
           <p className="truncate text-sm font-medium">{label}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1">
             <RarityBadge rarity={item.rarity} />
+            {item.limited && <LimitedBadge />}
             {inUse && (
               <Badge variant="secondary">
                 <Check /> {t("equipped")}
@@ -47,7 +50,13 @@ export function ShopItem({ item, owned, equipped, name, avatarKey }: { item: Cos
             )}
           </div>
         </div>
-        {!owned ? (
+        {!owned && item.limited ? (
+          <Button asChild size="sm" variant="outline">
+            <Link href={bannerId ? `/shop?banner=${bannerId}` : "/shop"}>
+              <Sparkles /> {t("gachaFromBanner")}
+            </Link>
+          </Button>
+        ) : !owned ? (
           <SpendButton
             price={item.credits}
             label={t("buy")}

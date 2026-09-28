@@ -11,6 +11,16 @@ export interface CosmeticItem {
   kind: CosmeticKind;
   credits: number;
   rarity: Rarity;
+  /** Only drops from its own limited gacha banner; never sold. */
+  limited?: true;
+}
+
+/** `rates` in percent over what this banner can still give this player; `limited` is the featured item's share. */
+export interface GachaBanner {
+  id: string;
+  featured: string | null;
+  remaining: number;
+  rates: Record<Rarity | "limited", number>;
 }
 
 /** GET /cosmetics/me */
@@ -19,8 +29,8 @@ export interface CosmeticsShop {
   owned: string[];
   equipped: CosmeticsView;
   balance: number;
-  /** `rates` in percent over the items this player doesn't own yet. */
-  gacha: { price: number; remaining: number; rates: Record<Rarity, number> };
+  /** `batch` opens at once for `price` each, rare or better guaranteed. The first banner is the standard box. */
+  gacha: { price: number; batch: number; banners: GachaBanner[] };
 }
 
 export function useCosmetics() {
@@ -42,5 +52,5 @@ export function useEquipCosmetic() {
 }
 
 export function usePullGacha() {
-  return useShopMutation(() => api<{ item: CosmeticItem; shop: CosmeticsShop }>("/cosmetics/gacha/pull", { method: "POST" }));
+  return useShopMutation((body: { banner: string; count: number }) => api<{ items: CosmeticItem[]; shop: CosmeticsShop }>("/cosmetics/gacha/pull", { method: "POST", body }));
 }

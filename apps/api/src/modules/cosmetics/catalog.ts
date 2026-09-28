@@ -11,6 +11,8 @@ export interface CosmeticItem {
   kind: CosmeticKind;
   credits: number;
   rarity: Rarity;
+  /** Only drops from its own limited gacha banner; never sold. */
+  limited?: true;
 }
 
 /** Common price per kind; rare and epic cost more, so the gacha is the cheap way to chase them. */
@@ -53,9 +55,13 @@ const IDS: Record<CosmeticKind, Record<Rarity, string[]>> = {
 /** Rounded to 5 credits. */
 const priceOf = (kind: CosmeticKind, rarity: Rarity) => Math.ceil((PRICE[kind] * RARITY_MULTIPLIER[rarity]) / 5) * 5;
 
-export const COSMETICS: CosmeticItem[] = COSMETIC_KINDS.flatMap((kind) =>
-  RARITIES.flatMap((rarity) => IDS[kind][rarity].map((id) => ({ id, kind, rarity, credits: priceOf(kind, rarity) }))),
-);
+/** Epic pets featured on a limited gacha banner each (`GACHA_BANNERS`); `credits` only ranks them, they can't be bought. */
+const LIMITED_PETS = ["pet_goldenleader", "pet_hiyuki"];
+
+export const COSMETICS: CosmeticItem[] = [
+  ...COSMETIC_KINDS.flatMap((kind) => RARITIES.flatMap((rarity) => IDS[kind][rarity].map((id) => ({ id, kind, rarity, credits: priceOf(kind, rarity) })))),
+  ...LIMITED_PETS.map((id) => ({ id, kind: "pet" as const, rarity: "epic" as const, credits: priceOf("pet", "epic"), limited: true as const })),
+];
 
 export function findCosmetic(id: string) {
   return COSMETICS.find((item) => item.id === id) ?? null;
