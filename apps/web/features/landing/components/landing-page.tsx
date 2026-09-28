@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { GAMES } from "@/lib/contracts";
 import { useSession } from "@/lib/session";
 import { useLandingMessages } from "../messages";
+import { LandingFooter } from "./landing-footer";
 
 type LandingT = ReturnType<typeof useLandingMessages>["t"];
 
@@ -48,9 +49,7 @@ export function LandingPage() {
         <SupportedGames t={t} />
       </main>
 
-      <footer className="border-t border-border">
-        <p className="mx-auto max-w-5xl px-4 py-4 text-xs text-muted-foreground">{t("notAffiliated")}</p>
-      </footer>
+      <LandingFooter />
     </div>
   );
 }
@@ -108,8 +107,8 @@ function Hero({ t, authenticated }: { t: LandingT; authenticated: boolean }) {
   );
 }
 
-const INTRO_YOUTUBE_ID = "U0_TYpN6TX4";
-const INTRO_POSTER = "/videos/fpt-esporthub-intro-poster.webp";
+const INTRO_YOUTUBE_ID = "SuZqT-xWnIo";
+const INTRO_POSTER = "/videos/fpt-esporthub-intro-v2-poster.webp";
 const VIDEO_FRAME = "aspect-video w-full overflow-hidden rounded-xl border border-border bg-card";
 
 /** Poster until clicked, then YouTube (streams from caches inside Vietnamese ISPs). */
@@ -132,7 +131,7 @@ function IntroVideo({ t }: { t: LandingT }) {
       ) : (
         <button type="button" onClick={() => setPlaying(true)} className={`group relative ${VIDEO_FRAME}`}>
           <img src={INTRO_POSTER} alt="" loading="lazy" className="size-full object-cover" />
-          {/* Bottom corner: the poster's center holds the logo and name. */}
+          {/* Bottom corner: the poster's end card holds the logo, tagline and URL. */}
           <span className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-primary p-2.5 font-medium text-primary-foreground shadow-lg transition-transform group-hover:scale-105 group-focus-visible:scale-105 sm:bottom-5 sm:left-5 sm:px-4">
             <Play className="size-4 fill-current sm:size-5" aria-hidden />
             <span className="max-sm:sr-only">{t("introPlay")}</span>
