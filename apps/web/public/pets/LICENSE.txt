@@ -1,4 +1,4 @@
-Pet sprites in this folder are cropped from the idle animation of codex-pets:
+Pet sprites in this folder are cropped from the idle and running animations of codex-pets:
 https://github.com/mileson/codex-pets
 
 MIT License

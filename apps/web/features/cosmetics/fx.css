@@ -79,12 +79,13 @@
   animation: fx-rotate 14s linear infinite;
 }
 
-/* Pets: a 6-frame idle strip (public/pets), stepped through left to right. Height comes from the utility classes. */
+/* Pets: a strip of frames side by side (public/pets; idle = 6, walk = 8 via --pet-frames), stepped through left to right.
+   Height comes from the caller. */
 .pet-sprite {
   aspect-ratio: 89 / 96;
   background-repeat: no-repeat;
-  background-size: 600% 100%;
-  animation: pet-idle 1.2s steps(6, jump-none) infinite;
+  background-size: calc(var(--pet-frames, 6) * 100%) 100%;
+  animation: pet-idle calc(var(--pet-frames, 6) * 0.2s) steps(var(--pet-frames, 6), jump-none) infinite;
   pointer-events: none;
 }
 @keyframes pet-idle {
@@ -92,11 +93,11 @@
   to { background-position-x: 100%; }
 }
 .fx-pet-halo {
-  animation: pet-idle 1.2s steps(6, jump-none) infinite, fx-halo 2.4s ease-in-out infinite;
+  animation: pet-idle calc(var(--pet-frames, 6) * 0.2s) steps(var(--pet-frames, 6), jump-none) infinite, fx-halo 2.4s ease-in-out infinite;
 }
 /* Epic pet: halo plus sparkles drifting around it. Needs a positioned element. */
 .fx-pet-sparkle {
-  animation: pet-idle 1.2s steps(6, jump-none) infinite, fx-halo 1.8s ease-in-out infinite;
+  animation: pet-idle calc(var(--pet-frames, 6) * 0.2s) steps(var(--pet-frames, 6), jump-none) infinite, fx-halo 1.8s ease-in-out infinite;
 }
 .fx-pet-sparkle::before,
 .fx-pet-sparkle::after {
@@ -118,10 +119,65 @@
     radial-gradient(1.5px 1.5px at 76% 96%, #f0abfc, transparent);
 }
 
+/* Gacha opening (gacha-stage.tsx): rumble while the pull runs, shake harder over --shake-ms, flash, sparks fly
+   out along --dx/--dy, and the item rises out of the chest then floats. */
+@keyframes gacha-rumble {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  25% { transform: translateY(-3px) rotate(-1.5deg); }
+  75% { transform: translateY(-1px) rotate(1.5deg); }
+}
+@keyframes gacha-shake {
+  0% { transform: translate(0, 0) rotate(0) scale(1); }
+  10% { transform: translate(-2px, -2px) rotate(-3deg) scale(1.02); }
+  20% { transform: translate(2px, -1px) rotate(3deg) scale(1.02); }
+  30% { transform: translate(-3px, -4px) rotate(-5deg) scale(1.04); }
+  40% { transform: translate(3px, -3px) rotate(5deg) scale(1.04); }
+  50% { transform: translate(-4px, -6px) rotate(-7deg) scale(1.06); }
+  60% { transform: translate(4px, -5px) rotate(7deg) scale(1.07); }
+  70% { transform: translate(-5px, -8px) rotate(-9deg) scale(1.08); }
+  80% { transform: translate(5px, -8px) rotate(9deg) scale(1.1); }
+  90% { transform: translate(-6px, -10px) rotate(-10deg) scale(1.12); }
+  100% { transform: translate(0, -12px) rotate(0) scale(1.15); }
+}
+@keyframes gacha-flash {
+  0% { opacity: 0; transform: scale(0.4); }
+  25% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+@keyframes gacha-spark {
+  0% { opacity: 1; transform: translate(0, 0) scale(1.4); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); }
+}
+@keyframes gacha-rise {
+  0% { opacity: 0; transform: translateY(140px) scale(0.2); }
+  60% { opacity: 1; transform: translateY(-14px) scale(1.06); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes gacha-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.gacha-rumble {
+  animation: gacha-rumble 0.35s ease-in-out infinite;
+}
+.gacha-shake {
+  animation: gacha-shake var(--shake-ms, 1s) ease-in forwards;
+}
+.gacha-flash {
+  animation: gacha-flash 0.45s ease-out forwards;
+}
+.gacha-spark {
+  animation: gacha-spark 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.gacha-rise {
+  animation: gacha-rise 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) both, gacha-bob 2.8s ease-in-out 0.6s infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [class*="fx-"],
   [class*="fx-"]::before,
   [class*="fx-"]::after,
+  [class*="gacha-"],
   .pet-sprite {
     animation: none !important;
   }

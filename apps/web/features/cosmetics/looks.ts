@@ -30,11 +30,11 @@ export const CARD_LOOK: Record<string, string> = {
     "ring-2 ring-zinc-400/50 bg-[repeating-linear-gradient(135deg,rgb(255_255_255/0.035)_0_6px,transparent_6px_12px)]",
 };
 
-/** Illustrated card borders: a 120px SVG cut into a 9-slice at 40px (see CardDecoration). `peek` = pet drawn at the top edge. */
-export const CARD_ART: Record<string, { src: string; peek?: string }> = {
+/** Illustrated card borders: a 120px SVG cut into a 9-slice at 40px (see CardDecoration). */
+export const CARD_ART: Record<string, { src: string }> = {
   card_gold: { src: "/cosmetics/card_gold.svg" },
   card_ember: { src: "/cosmetics/card_ember.svg" },
-  card_neon: { src: "/cosmetics/card_neon.svg", peek: "pet_neonwyrm" },
+  card_neon: { src: "/cosmetics/card_neon.svg" },
 };
 
 export const NAME_COLOR_LOOK: Record<string, string> = {

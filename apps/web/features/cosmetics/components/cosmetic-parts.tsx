@@ -31,14 +31,14 @@ export function CosmeticFrame({ frame, pet, children, className }: { frame: stri
   );
 }
 
-export function CosmeticPet({ pet, className, style }: { pet: string; className?: string; style?: React.CSSProperties }) {
+export function CosmeticPet({ pet, className }: { pet: string; className?: string }) {
   const { t } = useCosmeticsMessages();
   return (
     <span
       role="img"
       aria-label={t(pet as CosmeticsMessageKey)}
       className={cn("pet-sprite relative block", PET_FX[pet], className)}
-      style={{ ...style, backgroundImage: `url(${PET_SPRITE[pet]})` }}
+      style={{ backgroundImage: `url(${PET_SPRITE[pet]})` }}
       data-pet={pet}
     />
   );
@@ -56,15 +56,13 @@ export function cardLookClass(card: string | null | undefined) {
   return CARD_ART[card] ? "relative" : CARD_LOOK[card];
 }
 
-/** Illustrated card border (a 9-slice SVG) laid over the card's edges, plus the epic card's peeking pet. */
+/** Illustrated card border (a 9-slice SVG) laid over the card's edges. */
 export function CardDecoration({ card, width = 28 }: { card: string | null | undefined; width?: number }) {
   const art = card ? CARD_ART[card] : undefined;
   if (!art) return null;
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] rounded-[inherit]" data-card={card}>
-      <div className="absolute inset-0 border-solid" style={{ borderWidth: width, borderImage: `url(${art.src}) 40 / ${width}px round` }} />
-      {art.peek && <CosmeticPet pet={art.peek} className="absolute top-0 right-[12%]" style={{ height: width * 1.7 }} />}
-    </div>
+      <div className="absolute inset-0 border-solid" style={{ borderWidth: width, borderImage: `url(${art.src}) 40 / ${width}px round` }} />    </div>
   );
 }
 

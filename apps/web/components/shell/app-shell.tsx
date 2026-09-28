@@ -2,6 +2,7 @@
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/contracts";
+import { PetWalker } from "@/features/cosmetics/components/pet-walker";
 import { useSession } from "@/lib/session";
 import { AppSidebar } from "./app-sidebar";
 import { MobileTabBar } from "./mobile-tab-bar";
@@ -17,6 +18,7 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
         <main className="mx-auto w-full max-w-6xl px-4 py-6 pb-32 md:px-6 md:pb-24">{children}</main>
       </div>
       {profiles.length > 0 && <MobileTabBar />}
+      <PetWalker aboveTabBar={profiles.length > 0} />
     </SidebarProvider>
   );
 }
