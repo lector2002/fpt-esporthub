@@ -22,6 +22,11 @@ export class CreditsController {
     return this.credits.getMine(req.user.id);
   }
 
+  @Post("check-in")
+  checkIn(@Request() req: AuthedRequest) {
+    return this.credits.checkIn(req.user.id);
+  }
+
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("topups")
   createTopUp(@Request() req: AuthedRequest, @Body() dto: CreateTopUpDto) {

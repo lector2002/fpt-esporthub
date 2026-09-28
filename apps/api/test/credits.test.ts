@@ -2,6 +2,7 @@
 import { strict as assert } from "node:assert";
 import { createHmac } from "node:crypto";
 import { InsufficientCreditsError, applyCredit } from "../src/modules/credits/credit-ledger";
+import { CHECK_IN, checkInReward, nextStreak } from "../src/modules/credits/rewards";
 import { CREDIT_VND, TOPUP_MAX, TOPUP_MIN, TOPUP_PACKAGES, creditsForVnd, topUpPackage } from "../src/modules/credits/credit-pricing";
 import { createPaymentProvider } from "../src/modules/credits/payment-provider";
 import { isValidWebhookSignature, signPaymentRequest, signWebhookData } from "../src/modules/credits/payos-signature";
@@ -17,8 +18,8 @@ const KEY = "test-checksum-key";
 const hmac = (data: string) => createHmac("sha256", KEY).update(data).digest("hex");
 
 /** Just enough of a Prisma transaction client for the ledger: one user row and a transactions table. */
-function fakeTx(balance: number) {
-  const user = { id: "u1", creditBalance: balance };
+function fakeTx(balance: number, locked = 0) {
+  const user = { id: "u1", creditBalance: balance, lockedCredits: locked };
   const rows: { ref: string; amount: number; balanceAfter: number }[] = [];
   const tx = {
     creditTransaction: {
@@ -28,13 +29,15 @@ function fakeTx(balance: number) {
         rows.push(data);
       },
     },
+    // Same as the ledger's UPDATE, reading its values in order.
+    $executeRaw: async (_sql: TemplateStringsArray, amount: number, lockedChange: number, _id: string, paidOnly: boolean, need: number) => {
+      if (user.creditBalance - (paidOnly ? user.lockedCredits : 0) < need) return 0;
+      user.creditBalance += amount;
+      user.lockedCredits = Math.max(user.lockedCredits + lockedChange, 0);
+      return 1;
+    },
     user: {
-      updateMany: async ({ where, data }: { where: { creditBalance?: { gte: number } }; data: { creditBalance: { increment: number } } }) => {
-        if (where.creditBalance && user.creditBalance < where.creditBalance.gte) return { count: 0 };
-        user.creditBalance += data.creditBalance.increment;
-        return { count: 1 };
-      },
-      findUniqueOrThrow: async () => ({ creditBalance: user.creditBalance }),
+      findUniqueOrThrow: async () => ({ creditBalance: user.creditBalance, lockedCredits: user.lockedCredits }),
     },
   };
   return { tx: tx as unknown as Parameters<typeof applyCredit>[0], user, rows };
@@ -120,6 +123,38 @@ async function main() {
     const { tx } = fakeTx(100);
     await assert.rejects(applyCredit(tx, { userId: "u1", amount: 0, kind: "ADJUSTMENT", ref: "a" }));
     await assert.rejects(applyCredit(tx, { userId: "u1", amount: 1.5, kind: "ADJUSTMENT", ref: "b" }));
+  });
+
+  await test("reward credits come in locked and a spend uses them before paid credits", async () => {
+    const { tx, user } = fakeTx(10);
+    await applyCredit(tx, { userId: "u1", amount: 3, kind: "REWARD", ref: "checkin:1", locked: true });
+    assert.deepEqual([user.creditBalance, user.lockedCredits], [13, 3]);
+    await applyCredit(tx, { userId: "u1", amount: -2, kind: "BOOST", ref: "boost:1" });
+    assert.deepEqual([user.creditBalance, user.lockedCredits], [11, 1]);
+    await applyCredit(tx, { userId: "u1", amount: -5, kind: "BOOST", ref: "boost:2" });
+    assert.deepEqual([user.creditBalance, user.lockedCredits], [6, 0]);
+  });
+
+  await test("a coaching hold can't use reward credits", async () => {
+    const { tx, user } = fakeTx(10, 8);
+    await assert.rejects(applyCredit(tx, { userId: "u1", amount: -3, kind: "COACHING_HOLD", ref: "hold:1", paidOnly: true }), InsufficientCreditsError);
+    await applyCredit(tx, { userId: "u1", amount: -2, kind: "COACHING_HOLD", ref: "hold:2", paidOnly: true });
+    assert.deepEqual([user.creditBalance, user.lockedCredits], [8, 8]);
+  });
+
+  await test("the check-in streak grows on consecutive Vietnam days and restarts after a missed day", () => {
+    assert.equal(nextStreak(null, 0, "2026-09-28"), 1);
+    assert.equal(nextStreak("2026-09-27", 4, "2026-09-28"), 5);
+    assert.equal(nextStreak("2026-09-30", 2, "2026-10-01"), 3);
+    assert.equal(nextStreak("2026-09-26", 4, "2026-09-28"), 1);
+  });
+
+  await test("every check-in gives the daily credits and every full streak cycle adds the bonus", () => {
+    const rewards = Array.from({ length: CHECK_IN.every * 2 }, (_, index) => checkInReward(index + 1));
+    const bonusDays = rewards.flatMap((reward, index) => (reward > CHECK_IN.daily ? [index + 1] : []));
+    assert.deepEqual(bonusDays, [CHECK_IN.every, CHECK_IN.every * 2]);
+    assert.equal(checkInReward(CHECK_IN.every), CHECK_IN.daily + CHECK_IN.bonus);
+    assert.equal(checkInReward(1), CHECK_IN.daily);
   });
 
   console.log(`${passed} passed`);

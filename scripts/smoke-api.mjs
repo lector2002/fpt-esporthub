@@ -338,6 +338,16 @@ await expectStatus("someone else can't pay my order", 404, "POST", `/credits/top
 await expectStatus("mock pay", 201, "POST", `/credits/topups/${order?.orderCode}/mock-pay`, { token: buyer.token });
 await call("POST", `/credits/topups/${order?.orderCode}/mock-pay`, { token: buyer.token });
 check("paying twice credits once", (await balanceOf(buyer)) === 50);
+const gifted = await expectStatus("cosmetics after the first top-up", 200, "GET", "/cosmetics/me", { token: buyer.token });
+check("first top-up gives the Solara pet and equips it", gifted?.owned?.includes("pet_solara") && gifted?.equipped?.pet === "pet_solara", JSON.stringify(gifted?.equipped));
+
+// Daily check-in: locked reward credits once per Vietnam day.
+const visitor = await createPlayer("checkin");
+const firstVisit = await expectStatus("daily check-in", 201, "POST", "/credits/check-in", { token: visitor.token });
+check("first check-in gives day 1 credits", firstVisit?.claimed === true && firstVisit?.streak === 1 && firstVisit?.reward === firstVisit?.rules?.daily, JSON.stringify(firstVisit));
+const againVisit = await expectStatus("second check-in today", 201, "POST", "/credits/check-in", { token: visitor.token });
+const visitorWallet = (await call("GET", "/credits/me", { token: visitor.token })).body;
+check("checking in twice a day credits once, as locked credits", againVisit?.claimed === false && visitorWallet?.balance === firstVisit?.rules?.daily && visitorWallet?.locked === firstVisit?.rules?.daily, JSON.stringify({ againVisit, balance: visitorWallet?.balance, locked: visitorWallet?.locked }));
 const dropped = (await expectStatus("second top-up", 201, "POST", "/credits/topups", { token: buyer.token, body: { credits: 20 } }))?.topUp;
 const cancelled = (await expectStatus("cancel top-up", 201, "POST", `/credits/topups/${dropped?.orderCode}/mock-cancel`, { token: buyer.token }))?.topUp;
 check("cancelled top-up adds nothing", cancelled?.status === "CANCELLED" && (await balanceOf(buyer)) === 50);

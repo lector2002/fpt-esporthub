@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import type { GameSlug } from "@/lib/contracts";
 import { useSession } from "@/lib/session";
-import type { AdminCreditTransaction, CoachingPayments, TopUp, Wallet } from "./types";
+import type { AdminCreditTransaction, CheckIn, CoachingPayments, TopUp, Wallet } from "./types";
 
 export const WALLET_KEY = ["credits"] as const;
 
@@ -31,6 +31,8 @@ export function useTopUp(orderCode: number | null) {
     queryFn: async () => {
       const { topUp } = await api<{ topUp: TopUp }>(`/credits/topups/${orderCode}`);
       if (topUp.status !== "PENDING") void queryClient.invalidateQueries({ queryKey: [...WALLET_KEY, "me"] });
+      // A first top-up also gives a pet.
+      if (topUp.status === "PAID") void queryClient.invalidateQueries({ queryKey: ["cosmetics"] });
       return topUp;
     },
     enabled: orderCode !== null,
@@ -42,6 +44,16 @@ export function useTopUp(orderCode: number | null) {
 function useWalletMutation<T, V>(fn: (vars: V) => Promise<T>) {
   const queryClient = useQueryClient();
   return useMutation({ mutationFn: fn, onSuccess: () => queryClient.invalidateQueries() });
+}
+
+export function useCheckIn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<CheckIn>("/credits/check-in", { method: "POST" }),
+    onSuccess: (result) => {
+      if (result.claimed) void queryClient.invalidateQueries({ queryKey: WALLET_KEY });
+    },
+  });
 }
 
 export function useMockCheckout() {

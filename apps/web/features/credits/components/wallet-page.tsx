@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { useCreateTopUp, useTopUp, useWallet } from "../api";
 import { useCreditsMessages } from "../messages";
 import type { Wallet } from "../types";
+import { RewardsCard } from "./daily-reward";
 
 export function WalletPage() {
   const { t } = useCreditsMessages();
@@ -38,6 +39,7 @@ export function WalletPage() {
               <TopUpCard wallet={data} />
             </div>
             <div className="flex flex-col gap-6">
+              <RewardsCard rewards={data.rewards} />
               <SpendCard wallet={data} />
               <HistoryCard wallet={data} />
             </div>
@@ -61,6 +63,11 @@ function BalanceCard({ wallet }: { wallet: Wallet }) {
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">{t("creditValue")}</p>
+        {wallet.locked > 0 && (
+          <p className="mt-1 text-sm text-muted-foreground" data-testid="locked-balance">
+            {t("lockedBalance", { count: wallet.locked })} {wallet.coachingInCredits && t("lockedCoaching")}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

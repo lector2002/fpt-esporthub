@@ -2,6 +2,7 @@
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import type { SessionUser } from "@/lib/contracts";
+import { DailyReward } from "@/features/credits/components/daily-reward";
 import { PetWalker } from "@/features/cosmetics/components/pet-walker";
 import { useSession } from "@/lib/session";
 import { AppSidebar } from "./app-sidebar";
@@ -19,6 +20,7 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
       </div>
       {profiles.length > 0 && <MobileTabBar />}
       <PetWalker aboveTabBar={profiles.length > 0} />
+      <DailyReward />
     </SidebarProvider>
   );
 }

@@ -52,7 +52,7 @@ export class CoachingSettlementService implements OnModuleInit, OnModuleDestroy 
     const amount = creditsForVnd(request.proposedPrice);
     if (amount === 0) return;
     try {
-      await this.credits.apply({ userId: request.playerId, amount: -amount, kind: "COACHING_HOLD", ref: `coaching-hold:${request.id}`, note: "Coaching session" }, tx);
+      await this.credits.apply({ userId: request.playerId, amount: -amount, kind: "COACHING_HOLD", ref: `coaching-hold:${request.id}`, note: "Coaching session", paidOnly: true }, tx);
     } catch (error) {
       if (error instanceof ConflictException && !agreedByPlayer) throw new ConflictException(`The player needs ${amount} credits to confirm this session`);
       throw error;

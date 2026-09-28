@@ -14,6 +14,7 @@ import { CREDIT_VND, TOPUP_MAX, TOPUP_MIN, TOPUP_PACKAGES, creditsCoachingEnable
 import { InsufficientCreditsError, applyCredit, isDuplicateRef, type LedgerEntry } from "./credit-ledger";
 import { PAYMENT_PROVIDER, type PaymentProvider } from "./payment-provider";
 import { PROMOTIONS } from "./promotion";
+import { CHECK_IN, FIRST_TOPUP_PET, checkInReward, nextStreak, vnDay } from "./rewards";
 
 const HISTORY_LIMIT = 30;
 const TOPUP_SELECT = { orderCode: true, credits: true, amountVnd: true, status: true, checkoutUrl: true, createdAt: true, paidAt: true } as const;
@@ -35,13 +36,16 @@ export class CreditsService {
   }
 
   async getMine(userId: string) {
-    const [user, transactions, topUps] = await Promise.all([
-      this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { creditBalance: true } }),
+    const [user, rewards, transactions, topUps] = await Promise.all([
+      this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { creditBalance: true, lockedCredits: true } }),
+      this.rewardsState(userId),
       this.prisma.creditTransaction.findMany({ where: { userId }, select: TX_SELECT, orderBy: { createdAt: "desc" }, take: HISTORY_LIMIT }),
       this.prisma.creditTopUp.findMany({ where: { userId }, select: TOPUP_SELECT, orderBy: { createdAt: "desc" }, take: 10 }),
     ]);
     return {
       balance: user.creditBalance,
+      locked: user.lockedCredits,
+      rewards,
       transactions,
       topUps,
       packages: TOPUP_PACKAGES.map((credits) => topUpPackage(credits)!),
@@ -49,6 +53,53 @@ export class CreditsService {
       promotions: PROMOTIONS,
       coachingInCredits: creditsCoachingEnabled(),
       provider: this.provider?.name ?? null,
+    };
+  }
+
+  /**
+   * Daily check-in, once per Vietnam day: reward credits (locked) and the streak. `claimed` is false when today's
+   * check-in was already done, so the app shows the rewards popup once a day.
+   */
+  async checkIn(userId: string) {
+    const today = vnDay();
+    let claimed = false;
+    try {
+      claimed = await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { checkInStreak: true, lastCheckInDay: true } });
+        const lastDay = user.lastCheckInDay ? user.lastCheckInDay.toISOString().slice(0, 10) : null;
+        if (lastDay === today) return false;
+        const streak = nextStreak(lastDay, user.checkInStreak, today);
+        const reward = checkInReward(streak);
+        const credited = await applyCredit(tx, { userId, amount: reward, kind: "REWARD", ref: `checkin:${userId}:${today}`, note: `Day ${streak} check-in`, locked: true });
+        if (!credited.applied) return false;
+        await tx.user.update({ where: { id: userId }, data: { checkInStreak: streak, lastCheckInDay: new Date(`${today}T00:00:00Z`) } });
+        return true;
+      });
+    } catch (error) {
+      // Another tab checked in at the same moment.
+      if (!isDuplicateRef(error)) throw error;
+    }
+    if (claimed) this.notifyBalance(userId);
+    const rewards = await this.rewardsState(userId);
+    return { claimed, reward: checkInReward(rewards.streak), ...rewards };
+  }
+
+  /** Login rewards as the popup and the wallet show them. */
+  private async rewardsState(userId: string) {
+    const [user, pet] = await Promise.all([
+      this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { checkInStreak: true, lastCheckInDay: true } }),
+      this.prisma.userCosmetic.findUnique({ where: { userId_itemId: { userId, itemId: FIRST_TOPUP_PET } }, select: { id: true } }),
+    ]);
+    const today = vnDay();
+    const lastDay = user.lastCheckInDay?.toISOString().slice(0, 10) ?? null;
+    const checkedInToday = lastDay === today;
+    // A streak that missed a day is already over: checking in today would restart it at 1.
+    const alive = checkedInToday || nextStreak(lastDay, user.checkInStreak, today) > 1;
+    return {
+      streak: alive ? user.checkInStreak : 0,
+      checkedInToday,
+      rules: CHECK_IN,
+      firstTopUpPet: { id: FIRST_TOPUP_PET, owned: Boolean(pet) },
     };
   }
 
@@ -131,7 +182,9 @@ export class CreditsService {
       if (result.applied) this.notifyBalance(entry.userId);
       return result;
     } catch (error) {
-      if (error instanceof InsufficientCreditsError) throw new ConflictException("Not enough credits. Top up in your wallet.");
+      if (error instanceof InsufficientCreditsError) {
+        throw new ConflictException(entry.paidOnly ? "Not enough paid credits. Reward credits can't pay for coaching." : "Not enough credits. Top up in your wallet.");
+      }
       if (isDuplicateRef(error)) return { applied: false, balance: null };
       throw error;
     }
@@ -169,6 +222,9 @@ export class CreditsService {
         });
         if (marked.count === 0) return null;
         await applyCredit(tx, { userId: topUp.userId, amount: topUp.credits, kind: "TOPUP", ref: `topup:${orderCode}`, note: `${topUp.amountVnd} VND` });
+        // First top-up gift: skipDuplicates, so a user who already owns the pet (or a racing gacha pull) changes nothing.
+        const gift = await tx.userCosmetic.createMany({ data: [{ userId: topUp.userId, itemId: FIRST_TOPUP_PET }], skipDuplicates: true });
+        if (gift.count > 0) await tx.user.updateMany({ where: { id: topUp.userId, petId: null }, data: { petId: FIRST_TOPUP_PET } });
         return topUp.userId;
       });
       if (creditedUserId) this.notifyBalance(creditedUserId);

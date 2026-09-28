@@ -1,4 +1,4 @@
-export type CreditTxKind = "TOPUP" | "BOOST" | "FEATURE" | "COSMETIC" | "GUIDE" | "COACHING_HOLD" | "COACHING_REFUND" | "ADJUSTMENT";
+export type CreditTxKind = "TOPUP" | "BOOST" | "FEATURE" | "COSMETIC" | "GUIDE" | "COACHING_HOLD" | "COACHING_REFUND" | "ADJUSTMENT" | "REWARD";
 
 export interface CreditTransaction {
   id: string;
@@ -27,6 +27,9 @@ interface Promotion {
 /** GET /credits/me */
 export interface Wallet {
   balance: number;
+  /** Reward part of the balance: spent first, can't be withdrawn, refunded or used for coaching. */
+  locked: number;
+  rewards: Rewards;
   transactions: CreditTransaction[];
   topUps: TopUp[];
   packages: { credits: number; amountVnd: number }[];
@@ -36,6 +39,21 @@ export interface Wallet {
   /** Null = top-up turned off on this server. */
   provider: "payos" | "mock" | null;
   coachingInCredits: boolean;
+}
+
+/** Login rewards: check-in streak (0 = broken or never started), their rules and the first top-up pet. */
+export interface Rewards {
+  streak: number;
+  checkedInToday: boolean;
+  rules: { daily: number; every: number; bonus: number };
+  firstTopUpPet: { id: string; owned: boolean };
+}
+
+/** POST /credits/check-in. `claimed` = today's reward was just given (first visit of the Vietnam day). */
+export interface CheckIn extends Rewards {
+  claimed: boolean;
+  /** Today's reward, bonus included. */
+  reward: number;
 }
 
 export interface AdminCreditTransaction extends CreditTransaction {

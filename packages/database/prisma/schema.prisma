@@ -86,6 +86,11 @@ model User {
   coverKey        String?
   /// Spendable app credits (1 credit = 1,000 VND). Only CreditsService changes it, always with a CreditTransaction.
   creditBalance   Int             @default(0)
+  /// Part of creditBalance given as rewards: spent first, can't pay for coaching (which coaches are paid out for) or be refunded.
+  lockedCredits   Int             @default(0)
+  /// Daily check-in: consecutive Vietnam days ending on lastCheckInDay.
+  checkInStreak   Int             @default(0)
+  lastCheckInDay  DateTime?       @db.Date
   /// Equipped cosmetics (catalog ids in apps/api cosmetics/catalog.ts); only owned items can be equipped.
   frameId         String?
   bannerId        String?
@@ -138,6 +143,7 @@ enum CreditTxKind {
   COACHING_HOLD
   COACHING_REFUND
   ADJUSTMENT
+  REWARD
 }
 
 /// Append-only credit ledger. `ref` makes every movement idempotent (a replayed webhook credits once).
@@ -147,6 +153,8 @@ model CreditTransaction {
   /// Signed: positive = credits in, negative = spent or held.
   amount       Int
   balanceAfter Int
+  /// Locked (reward) part of balanceAfter.
+  lockedAfter  Int          @default(0)
   kind         CreditTxKind
   ref          String       @unique
   note         String?
