@@ -129,6 +129,9 @@ test("a limited banner features its pet at 0.1%, and the pet is never sold", asy
   await page.keyboard.press("Escape");
   await page.screenshot({ path: "output/cosmetics-shots/gacha-limited.png" });
 
-  await page.getByRole("button", { name: "Mystery box", exact: true }).click();
-  await expect(box).toHaveAttribute("data-banner-id", shop.gacha.banners[0].id);
+  const index = shop.gacha.banners.indexOf(banner);
+  await box.getByRole("button", { name: "Previous banner" }).click();
+  await expect(box).toHaveAttribute("data-banner-id", shop.gacha.banners[index - 1].id);
+  await box.getByRole("button", { name: "Next banner" }).click();
+  await expect(box).toHaveAttribute("data-banner-id", banner.id);
 });
