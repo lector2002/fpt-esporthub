@@ -12,7 +12,7 @@ import { type CosmeticsMessageKey, useCosmeticsMessages } from "../messages";
 import { RarityBadge } from "./cosmetic-parts";
 import { CosmeticPreview } from "./shop-item";
 
-export const CHEST = { closed: "/cosmetics/chest_closed.webp", open: "/cosmetics/chest_open.webp" };
+const CHEST = { closed: "/cosmetics/chest_closed.webp", open: "/cosmetics/chest_open.webp" };
 
 /** Rarer pulls charge longer and burst bigger. */
 const CHARGE_MS: Record<Rarity, number> = { common: 1600, rare: 2300, epic: 3200 };

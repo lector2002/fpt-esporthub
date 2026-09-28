@@ -1,0 +1,139 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="120" height="120" viewBox="0 0 120 120">
+<style>
+  .glint { transform-box: fill-box; transform-origin: center; animation: glint 4.8s ease-in-out infinite; }
+  .streak { animation: streak 4.8s ease-in-out infinite; }
+  .d1 { animation-delay: .45s; }
+  .d2 { animation-delay: .9s; }
+  .d3 { animation-delay: 1.35s; }
+.glint { opacity: 0; }
+@keyframes glint {
+  0%, 56% { opacity: 0; transform: scale(.1) rotate(0deg); }
+  66% { opacity: 1; transform: scale(1) rotate(45deg); }
+  78%, 100% { opacity: 0; transform: scale(.1) rotate(90deg); }
+}
+@keyframes streak {
+  0%, 50% { transform: translateX(0); }
+  70%, 100% { transform: translateX(26px); }
+}
+</style>
+<defs>
+  <clipPath id="cT"><rect x="40" y="0" width="40" height="40"/></clipPath>
+  <clipPath id="cC"><rect x="0" y="0" width="40" height="40"/></clipPath>
+  <clipPath id="cGem"><circle r="4.8"/></clipPath>
+  <path id="dia" d="M-2,0L0,-2.3L2,0L0,2.3Z" fill="#34b27b" stroke="#1d1a22" stroke-width="1" stroke-linejoin="round"/>
+
+  <g id="bead">
+    <circle r="3.3" fill="#1e7a55"/>
+    <circle cx="-.55" cy="-.6" r="2.6" fill="#34b27b"/>
+    <ellipse cx="-1.1" cy="-1.3" rx="1.3" ry=".9" fill="#c8f7df"/>
+    <circle cx="-1.3" cy="-1.5" r=".55" fill="#fff"/>
+    <circle r="3.3" fill="none" stroke="#1d1a22" stroke-width="1.1"/>
+  </g>
+
+  <!-- top edge tile, x 40..80 -->
+  <g id="edge" clip-path="url(#cT)">
+    <rect x="30" y="7.5" width="60" height="11" fill="#0e2a1f"/>
+    <rect x="30" y="2" width="60" height="5.5" fill="#34b27b"/>
+    <rect x="30" y="5.3" width="60" height="2.2" fill="#1e7a55"/>
+    <rect x="30" y="2.9" width="60" height="1" fill="#c8f7df"/>
+    <rect x="30" y="18.5" width="60" height="3.5" fill="#34b27b"/>
+    <rect x="30" y="20.8" width="60" height="1.2" fill="#1e7a55"/>
+    <rect x="30" y="19" width="60" height=".8" fill="#c8f7df"/>
+    <path d="M30,2H90M30,7.5H90M30,18.5H90M30,22H90" stroke="#1d1a22" stroke-width="1.3"/>
+    <use xlink:href="#dia" x="40" y="13"/><use xlink:href="#dia" x="50" y="13"/><use xlink:href="#dia" x="60" y="13"/><use xlink:href="#dia" x="70" y="13"/><use xlink:href="#dia" x="80" y="13"/>
+  </g>
+
+  <path id="s1" d="M20.5,11.4C25,8.6 31,8.4 34.4,10.6C37.4,12.6 36.4,16.8 32.8,16.9C30.2,17 29.4,14 31.6,13.2"/>
+  <path id="s2" d="M22,15.6C24.6,17 27,16.4 27.5,14.5"/>
+  <!-- one half of the corner scrollwork (mirrored across the diagonal) -->
+  <g id="scroll" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <use xlink:href="#s1" stroke="#1d1a22" stroke-width="4.6"/>
+    <use xlink:href="#s2" stroke="#1d1a22" stroke-width="4"/>
+    <use xlink:href="#s1" stroke="#1e7a55" stroke-width="2.6"/>
+    <use xlink:href="#s2" stroke="#1e7a55" stroke-width="2"/>
+    <use xlink:href="#s1" stroke="#34b27b" stroke-width="2.2" transform="translate(-.35,-.45)"/>
+    <use xlink:href="#s2" stroke="#34b27b" stroke-width="1.6" transform="translate(-.3,-.4)"/>
+    <use xlink:href="#s1" stroke="#c8f7df" stroke-width="1.1" transform="translate(-.7,-.9)"/>
+  </g>
+
+  <!-- top-left corner, 0..40 -->
+  <g id="corner" clip-path="url(#cC)">
+    <path d="M42,7.5H16A8.5,8.5 0 0 0 7.5,16V42H18.5V18.5H42Z" fill="#0e2a1f"/>
+    <path d="M42,2H16A14,14 0 0 0 2,16V42H7.5V16A8.5,8.5 0 0 1 16,7.5H42Z" fill="#34b27b"/>
+    <path d="M42,5.3H16A10.7,10.7 0 0 0 5.3,16V42H7.5V16A8.5,8.5 0 0 1 16,7.5H42Z" fill="#1e7a55"/>
+    <path d="M42,3.4H16A12.6,12.6 0 0 0 3.4,16V42" fill="none" stroke="#c8f7df" stroke-width="1"/>
+    <path d="M42,18.5H18.5V42H22V22H42Z" fill="#34b27b"/>
+    <path d="M42,20.8H20.8V42H22V22H42Z" fill="#1e7a55"/>
+    <path d="M42,19.4H19.4V42" fill="none" stroke="#c8f7df" stroke-width="1.1"/>
+    <path d="M42,2H16A14,14 0 0 0 2,16V42M42,7.5H16A8.5,8.5 0 0 0 7.5,16V42M42,18.5H18.5V42M42,22H22V42" fill="none" stroke="#1d1a22" stroke-width="1.3"/>
+    <use xlink:href="#dia" x="40" y="13"/><use xlink:href="#dia" x="13" y="40"/>
+    <use xlink:href="#scroll"/>
+    <use xlink:href="#scroll" transform="matrix(0,1,1,0,0,0)"/>
+    <!-- inward acanthus leaf -->
+    <path d="M18.5,18.5C24,19 28.6,23 30,30C23,28.6 19,24 18.5,18.5Z" fill="#1e7a55" stroke="#1d1a22" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M19.4,19.4C23.6,20.2 26.6,23 27.6,26.6C24.4,25.2 21,23.4 19.4,19.4Z" fill="#34b27b"/>
+    <path d="M20.6,20.6L28,28" stroke="#c8f7df" stroke-width="1" stroke-linecap="round"/>
+    <circle cx="31.4" cy="31.4" r="1.7" fill="#34b27b" stroke="#1d1a22" stroke-width="1"/>
+    <!-- gem setting -->
+    <g transform="translate(13,13) scale(1.2)" stroke-linejoin="round">
+      <path d="M9.2,0L6.1,2.53L6.5,6.5L2.53,6.1L0,9.2L-2.53,6.1L-6.5,6.5L-6.1,2.53L-9.2,0L-6.1,-2.53L-6.5,-6.5L-2.53,-6.1L0,-9.2L2.53,-6.1L6.5,-6.5L6.1,-2.53Z" fill="#1e7a55" stroke="#1d1a22" stroke-width="1.3"/>
+      <path d="M9.2,0L6.1,2.53L6.5,6.5L2.53,6.1L0,9.2L-2.53,6.1L-6.5,6.5L-6.1,2.53L-9.2,0L-6.1,-2.53L-6.5,-6.5L-2.53,-6.1L0,-9.2L2.53,-6.1L6.5,-6.5L6.1,-2.53Z" fill="#34b27b" transform="translate(-.5,-.5) scale(.84)"/>
+      <path d="M-6.5,-6.5L-2.53,-6.1L0,-9.2" fill="none" stroke="#c8f7df" stroke-width=".9" transform="scale(.8)"/>
+      <circle r="6" fill="#1e7a55" stroke="#1d1a22" stroke-width="1"/>
+      <path d="M-4.2,4.2A6,6 0 0 1 4.2,-4.2" fill="none" stroke="#c8f7df" stroke-width="1"/>
+    </g>
+  </g>
+
+  <g id="gemR">
+    <circle r="4.8" fill="#9a6b00"/>
+    <path d="M-3.4,3.4A4.8,4.8 0 0 1 3.4,-3.4Z" fill="#f5c542"/>
+    <path d="M0,-2.6L1.85,-1.85L2.6,0L1.85,1.85L0,2.6L-1.85,1.85L-2.6,0L-1.85,-1.85Z" fill="#fff3b0" opacity=".55"/>
+    <path d="M-3.9,-1.2Q-3.2,-3.2 -1.2,-3.9L-1.6,-2.2Q-2.4,-2 -2.4,-1.3Z" fill="#fff3b0"/>
+    <circle cx="-2.1" cy="-2.2" r=".9" fill="#fff"/>
+    <circle cx="2.1" cy="1.9" r=".5" fill="#fff" opacity=".7"/>
+    <circle r="4.8" fill="none" stroke="#1d1a22" stroke-width="1.2"/>
+  </g>
+  <g id="gemS">
+    <circle r="4.8" fill="#1a3a8e"/>
+    <path d="M-3.4,3.4A4.8,4.8 0 0 1 3.4,-3.4Z" fill="#2f6fe0"/>
+    <path d="M0,-2.6L1.85,-1.85L2.6,0L1.85,1.85L0,2.6L-1.85,1.85L-2.6,0L-1.85,-1.85Z" fill="#8fc0ff" opacity=".55"/>
+    <path d="M-3.9,-1.2Q-3.2,-3.2 -1.2,-3.9L-1.6,-2.2Q-2.4,-2 -2.4,-1.3Z" fill="#8fc0ff"/>
+    <circle cx="-2.1" cy="-2.2" r=".9" fill="#fff"/>
+    <circle cx="2.1" cy="1.9" r=".5" fill="#fff" opacity=".7"/>
+    <circle r="4.8" fill="none" stroke="#1d1a22" stroke-width="1.2"/>
+  </g>
+  <path id="star" d="M0,-6L.9,-.9L6,0L.9,.9L0,6L-.9,.9L-6,0L-.9,-.9Z" fill="#fff"/>
+</defs>
+
+<!-- edges -->
+<use xlink:href="#edge"/>
+<use xlink:href="#edge" transform="translate(0,120) scale(1,-1)"/>
+<use xlink:href="#edge" transform="matrix(0,1,1,0,0,0)"/>
+<use xlink:href="#edge" transform="matrix(0,1,-1,0,120,0)"/>
+<g>
+  <use xlink:href="#bead" x="45" y="13"/><use xlink:href="#bead" x="55" y="13"/><use xlink:href="#bead" x="65" y="13"/><use xlink:href="#bead" x="75" y="13"/>
+  <use xlink:href="#bead" x="45" y="107"/><use xlink:href="#bead" x="55" y="107"/><use xlink:href="#bead" x="65" y="107"/><use xlink:href="#bead" x="75" y="107"/>
+  <use xlink:href="#bead" x="13" y="45"/><use xlink:href="#bead" x="13" y="55"/><use xlink:href="#bead" x="13" y="65"/><use xlink:href="#bead" x="13" y="75"/>
+  <use xlink:href="#bead" x="107" y="45"/><use xlink:href="#bead" x="107" y="55"/><use xlink:href="#bead" x="107" y="65"/><use xlink:href="#bead" x="107" y="75"/>
+</g>
+
+<!-- corners -->
+<use xlink:href="#corner"/>
+<use xlink:href="#corner" transform="translate(120,0) scale(-1,1)"/>
+<use xlink:href="#corner" transform="translate(0,120) scale(1,-1)"/>
+<use xlink:href="#corner" transform="translate(120,120) scale(-1,-1)"/>
+
+<!-- gems + glints -->
+<use xlink:href="#gemR" transform="translate(13,13) scale(1.3)"/>
+<use xlink:href="#gemS" transform="translate(107,13) scale(1.3)"/>
+<use xlink:href="#gemR" transform="translate(107,107) scale(1.3)"/>
+<use xlink:href="#gemS" transform="translate(13,107) scale(1.3)"/>
+<g transform="translate(13,13) scale(1.3)" clip-path="url(#cGem)"><g transform="rotate(35)"><rect class="streak" x="-13" y="-8" width="2.6" height="16" fill="#fff" opacity=".7"/></g></g>
+<g transform="translate(107,13) scale(1.3)" clip-path="url(#cGem)"><g transform="rotate(35)"><rect class="streak d1" x="-13" y="-8" width="2.6" height="16" fill="#fff" opacity=".7"/></g></g>
+<g transform="translate(107,107) scale(1.3)" clip-path="url(#cGem)"><g transform="rotate(35)"><rect class="streak d2" x="-13" y="-8" width="2.6" height="16" fill="#fff" opacity=".7"/></g></g>
+<g transform="translate(13,107) scale(1.3)" clip-path="url(#cGem)"><g transform="rotate(35)"><rect class="streak d3" x="-13" y="-8" width="2.6" height="16" fill="#fff" opacity=".7"/></g></g>
+<use xlink:href="#star" class="glint" x="10.5" y="10.5"/>
+<use xlink:href="#star" class="glint d1" x="104.5" y="10.5"/>
+<use xlink:href="#star" class="glint d2" x="104.5" y="104.5"/>
+<use xlink:href="#star" class="glint d3" x="10.5" y="104.5"/>
+</svg>

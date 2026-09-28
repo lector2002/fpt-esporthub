@@ -52,6 +52,15 @@
   filter: drop-shadow(0 0 6px rgb(245 158 11 / 0.35));
   animation: fx-text-shine 3s linear infinite;
 }
+.fx-name-aurora {
+  background: linear-gradient(90deg, #7c3aed, #22d3ee, #34d399, #f472b6, #7c3aed);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 6px rgb(34 211 238 / 0.35));
+  animation: fx-text-shine 4s linear infinite;
+}
 
 /* Epic prestige fill: epic titles and the epic rarity badge. */
 .fx-prestige {

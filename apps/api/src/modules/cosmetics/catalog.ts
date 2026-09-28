@@ -18,16 +18,36 @@ const PRICE: Record<CosmeticKind, number> = { frame: 30, banner: 25, nameColor: 
 const RARITY_MULTIPLIER: Record<Rarity, number> = { common: 1, rare: 1.5, epic: 2 };
 
 const IDS: Record<CosmeticKind, Record<Rarity, string[]>> = {
-  frame: { common: ["frame_frost", "frame_sakura"], rare: ["frame_gold", "frame_ember"], epic: ["frame_neon"] },
-  banner: { common: ["banner_sunset", "banner_ocean"], rare: ["banner_ember", "banner_night"], epic: ["banner_aurora"] },
-  nameColor: { common: ["name_rose", "name_lime"], rare: ["name_cyan"], epic: ["name_gold"] },
-  title: {
-    common: ["title_shotcaller", "title_macro", "title_support", "title_one_trick", "title_chill"],
-    rare: ["title_clutch", "title_tryhard"],
-    epic: ["title_campus_legend"],
+  frame: {
+    common: ["frame_frost", "frame_sakura", "frame_mint", "frame_violet"],
+    rare: ["frame_gold", "frame_ember", "frame_jade", "frame_thunder"],
+    epic: ["frame_neon", "frame_dragon"],
   },
-  card: { common: ["card_frost", "card_carbon"], rare: ["card_gold", "card_ember"], epic: ["card_neon"] },
-  pet: { common: ["pet_corgibyte", "pet_pixpanda", "pet_honeybara"], rare: ["pet_vantacat", "pet_yukitsune"], epic: ["pet_neonwyrm"] },
+  banner: {
+    common: ["banner_sunset", "banner_ocean", "banner_forest", "banner_dusk"],
+    rare: ["banner_ember", "banner_night", "banner_sakura", "banner_arena"],
+    epic: ["banner_aurora", "banner_dragon"],
+  },
+  nameColor: {
+    common: ["name_rose", "name_lime", "name_sky", "name_amber"],
+    rare: ["name_cyan", "name_violet", "name_ember"],
+    epic: ["name_gold", "name_aurora"],
+  },
+  title: {
+    common: ["title_shotcaller", "title_macro", "title_support", "title_one_trick", "title_chill", "title_carry", "title_warder"],
+    rare: ["title_clutch", "title_tryhard", "title_pentakill", "title_ace"],
+    epic: ["title_campus_legend", "title_immortal"],
+  },
+  card: {
+    common: ["card_frost", "card_carbon", "card_mint", "card_dusk"],
+    rare: ["card_gold", "card_ember", "card_jade", "card_storm"],
+    epic: ["card_neon", "card_dragon"],
+  },
+  pet: {
+    common: ["pet_corgibyte", "pet_pixpanda", "pet_honeybara", "pet_clockshiba", "pet_mochimi"],
+    rare: ["pet_vantacat", "pet_yukitsune", "pet_noctcrow", "pet_crystolotl"],
+    epic: ["pet_neonwyrm", "pet_solara"],
+  },
 };
 
 /** Rounded to 5 credits. */

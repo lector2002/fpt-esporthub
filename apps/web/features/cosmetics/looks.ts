@@ -6,6 +6,8 @@
 export const FRAME_LOOK: Record<string, string> = {
   frame_frost: "bg-linear-to-br from-sky-100 via-cyan-400 to-blue-600",
   frame_sakura: "bg-linear-to-br from-pink-100 via-pink-400 to-rose-500",
+  frame_mint: "bg-linear-to-br from-emerald-100 via-teal-400 to-emerald-600",
+  frame_violet: "bg-linear-to-br from-violet-100 via-purple-400 to-indigo-500",
 };
 
 /** Drawn over the avatar at 1.5x its size; the avatar circle is the middle two thirds of the art. */
@@ -13,14 +15,22 @@ export const FRAME_ART: Record<string, string> = {
   frame_gold: "/cosmetics/frame_gold.svg",
   frame_ember: "/cosmetics/frame_ember.svg",
   frame_neon: "/cosmetics/frame_neon.svg",
+  frame_jade: "/cosmetics/frame_jade.webp",
+  frame_thunder: "/cosmetics/frame_thunder.webp",
+  frame_dragon: "/cosmetics/frame_dragon.webp",
 };
 
 export const BANNER_LOOK: Record<string, string> = {
   banner_sunset: "bg-linear-to-r from-orange-400 via-rose-500 to-purple-600",
   banner_ocean: "bg-linear-to-r from-cyan-500 via-sky-600 to-indigo-700",
+  banner_forest: "bg-linear-to-r from-emerald-600 via-green-700 to-teal-900",
+  banner_dusk: "bg-linear-to-r from-indigo-800 via-fuchsia-700 to-orange-400",
   banner_ember: "bg-[url(/cosmetics/banner_ember.svg)] bg-cover bg-center",
   banner_night: "bg-[url(/cosmetics/banner_night.svg)] bg-cover bg-center",
   banner_aurora: "bg-[url(/cosmetics/banner_aurora.svg)] bg-cover bg-center",
+  banner_sakura: "bg-[url(/cosmetics/banner_sakura.webp)] bg-cover bg-center",
+  banner_arena: "bg-[url(/cosmetics/banner_arena.webp)] bg-cover bg-center",
+  banner_dragon: "bg-[url(/cosmetics/banner_dragon.webp)] bg-cover bg-center",
 };
 
 /** Common card decoration: classes added to the whole card. */
@@ -28,6 +38,8 @@ export const CARD_LOOK: Record<string, string> = {
   card_frost: "ring-2 ring-sky-300/70 shadow-lg shadow-sky-400/20 bg-linear-to-b from-sky-300/15 via-card to-card",
   card_carbon:
     "ring-2 ring-zinc-400/50 bg-[repeating-linear-gradient(135deg,rgb(255_255_255/0.035)_0_6px,transparent_6px_12px)]",
+  card_mint: "ring-2 ring-emerald-300/70 shadow-lg shadow-emerald-400/20 bg-linear-to-b from-emerald-300/15 via-card to-card",
+  card_dusk: "ring-2 ring-violet-400/60 shadow-lg shadow-fuchsia-500/15 bg-linear-to-b from-violet-500/15 via-fuchsia-500/5 to-card",
 };
 
 /** Illustrated card borders: a 120px SVG cut into a 9-slice at 40px (see CardDecoration). */
@@ -35,6 +47,9 @@ export const CARD_ART: Record<string, { src: string }> = {
   card_gold: { src: "/cosmetics/card_gold.svg" },
   card_ember: { src: "/cosmetics/card_ember.svg" },
   card_neon: { src: "/cosmetics/card_neon.svg" },
+  card_jade: { src: "/cosmetics/card_jade.svg" },
+  card_storm: { src: "/cosmetics/card_storm.svg" },
+  card_dragon: { src: "/cosmetics/card_dragon.svg" },
 };
 
 export const NAME_COLOR_LOOK: Record<string, string> = {
@@ -42,6 +57,11 @@ export const NAME_COLOR_LOOK: Record<string, string> = {
   name_lime: "text-lime-700 dark:text-lime-400",
   name_cyan: "text-cyan-700 drop-shadow-[0_0_6px_rgb(34_211_238/0.55)] dark:text-cyan-300",
   name_gold: "fx-name-gold",
+  name_sky: "text-sky-700 dark:text-sky-400",
+  name_amber: "text-amber-700 dark:text-amber-400",
+  name_violet: "text-violet-700 drop-shadow-[0_0_6px_rgb(167_139_250/0.6)] dark:text-violet-300",
+  name_ember: "text-orange-700 drop-shadow-[0_0_6px_rgb(249_115_22/0.6)] dark:text-orange-400",
+  name_aurora: "fx-name-aurora",
 };
 
 /** Titles above common get a badge; the rest show as plain text. */
@@ -49,6 +69,9 @@ export const TITLE_TIER: Record<string, "rare" | "epic"> = {
   title_clutch: "rare",
   title_tryhard: "rare",
   title_campus_legend: "epic",
+  title_pentakill: "rare",
+  title_ace: "rare",
+  title_immortal: "epic",
 };
 
 /** Idle sprite strip (6 frames side by side) under public/pets; see public/pets/LICENSE.txt. */
@@ -59,12 +82,20 @@ export const PET_SPRITE: Record<string, string> = {
   pet_vantacat: "/pets/vantacat.webp",
   pet_yukitsune: "/pets/yukitsune.webp",
   pet_neonwyrm: "/pets/neonwyrm.webp",
+  pet_clockshiba: "/pets/clockshiba.webp",
+  pet_mochimi: "/pets/mochimi.webp",
+  pet_noctcrow: "/pets/noctcrow.webp",
+  pet_crystolotl: "/pets/crystolotl.webp",
+  pet_solara: "/pets/solara.webp",
 };
 
 export const PET_FX: Record<string, string> = {
   pet_vantacat: "fx-pet-halo [--fx-glow:rgb(167_139_250/0.85)]",
   pet_yukitsune: "fx-pet-halo [--fx-glow:rgb(103_232_249/0.85)]",
   pet_neonwyrm: "fx-pet-sparkle [--fx-glow:rgb(34_211_238/0.9)]",
+  pet_noctcrow: "fx-pet-halo [--fx-glow:rgb(196_181_253/0.85)]",
+  pet_crystolotl: "fx-pet-halo [--fx-glow:rgb(249_168_212/0.85)]",
+  pet_solara: "fx-pet-sparkle [--fx-glow:rgb(251_146_60/0.9)]",
 };
 
 /** Rarity badge, shop tile edge, and the glow and rays behind a gacha reveal. */

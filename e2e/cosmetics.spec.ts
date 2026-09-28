@@ -18,6 +18,7 @@ test("a player buys a frame and a banner that others see on the profile", async 
   await signIn(page, player, LOL);
   await page.goto("/shop");
 
+  await page.getByRole("tab", { name: "Avatar frames" }).click();
   await page.locator('[data-cosmetic="frame_frost"]').getByRole("button", { name: "Buy · 30 credits" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Pay 30 credits" }).click();
   await expect(toast(page, "Bought and in use")).toBeVisible();
@@ -71,5 +72,6 @@ test("the mystery box gives a new item each time and it can be used right away",
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("main").getByRole("link", { name: "0 credits", exact: true })).toBeVisible();
   await expect(box.getByRole("link", { name: /Top up/ })).toBeVisible();
-  await expect(page.locator("[data-cosmetic]").filter({ hasText: "In use" })).toHaveCount(1);
+  const { equipped } = await apiCall<{ equipped: Record<string, string | null> }>("/cosmetics/me", { token: player.token });
+  expect(Object.values(equipped).filter(Boolean)).toHaveLength(1);
 });

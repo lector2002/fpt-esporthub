@@ -1,5 +1,6 @@
 // Run: npm run test:api (from the repo root)
 import { strict as assert } from "node:assert";
+import { existsSync, readFileSync } from "node:fs";
 import { COSMETICS, COSMETIC_KINDS, EQUIPPED_FIELD, findCosmetic, toCosmeticsView, type CosmeticItem } from "../src/modules/cosmetics/catalog";
 import { RARITY_WEIGHT, gachaRates, pickFromPool } from "../src/modules/cosmetics/gacha";
 
@@ -47,6 +48,25 @@ test("an equipped id that left the catalog shows as nothing", () => {
     card: null,
     pet: null,
   });
+});
+
+test("every catalog id has a label in both languages, a look on the web, and its art files", () => {
+  // The web renders unknown ids as nothing, so a missing entry would fail silently. Run from the repo root.
+  const web = "apps/web";
+  const messages = readFileSync(`${web}/features/cosmetics/messages.ts`, "utf8");
+  const looks = readFileSync(`${web}/features/cosmetics/looks.ts`, "utf8");
+  for (const item of COSMETICS) {
+    assert.equal(messages.match(new RegExp(`^\\s+${item.id}: "`, "gm"))?.length, 2, `${item.id} label`);
+    if (item.kind !== "title" || item.rarity !== "common") assert.match(looks, new RegExp(`^\\s+${item.id}:\\s`, "m"), `${item.id} look`);
+  }
+  for (const [, file] of looks.matchAll(/"(\/(?:cosmetics|pets)\/[^"]+)"/g)) assert.ok(existsSync(`${web}/public${file}`), file);
+  for (const [, file] of looks.matchAll(/url\((\/cosmetics\/[^)]+)\)/g)) assert.ok(existsSync(`${web}/public${file}`), file);
+  for (const pet of COSMETICS.filter((item) => item.kind === "pet")) {
+    for (const move of ["", "-left", "-right", "-wave", "-jump", "-flop", "-wait", "-busy", "-review"]) {
+      const file = `${web}/public/pets/${pet.id.replace("pet_", "")}${move}.webp`;
+      assert.ok(existsSync(file), file);
+    }
+  }
 });
 
 const common = COSMETICS.filter((item) => item.rarity === "common").slice(0, 3);

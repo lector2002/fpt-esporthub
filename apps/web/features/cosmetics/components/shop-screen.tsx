@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Coins } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Award, CircleUserRound, Coins, CreditCard, Gift, ImageIcon, type LucideIcon, Palette, PawPrint } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { ListSkeleton, QueryState } from "@/components/common/query-state";
 import { Button } from "@/components/ui/button";
@@ -15,12 +16,29 @@ import { useCosmeticsMessages } from "../messages";
 import { GachaBox } from "./gacha-box";
 import { KINDS, ShopItem, byRarity } from "./shop-item";
 
-/** /shop: mystery box on top, then every item by kind. Owned items show Use instead of a price. */
+const GACHA = "gacha";
+type ShopTab = typeof GACHA | CosmeticKind;
+
+const KIND_ICON: Record<CosmeticKind, LucideIcon> = { pet: PawPrint, frame: CircleUserRound, banner: ImageIcon, nameColor: Palette, title: Award, card: CreditCard };
+
+const isTab = (value: string | null): value is ShopTab => value === GACHA || KINDS.some((kind) => kind === value);
+
+/** `?tab=` picks the tab so a kind can be linked to; the mystery box is the default. */
+function useShopTab() {
+  const router = useRouter();
+  const fromQuery = useSearchParams().get("tab");
+  const tab: ShopTab = isTab(fromQuery) ? fromQuery : GACHA;
+  const setTab = (next: string) => router.replace(next === GACHA ? "/shop" : `/shop?tab=${next}`, { scroll: false });
+  return [tab, setTab] as const;
+}
+
+/** /shop: the mystery box first, then one tab per kind. Owned items show Use instead of a price. */
 export function ShopScreen() {
   const { t } = useCosmeticsMessages();
   const credits = useCreditsMessages().t;
   const shop = useCosmetics();
   const user = useSession().user;
+  const [tab, setTab] = useShopTab();
   const name = user?.displayName ?? "";
   const avatarKey = user?.avatarKey ?? null;
 
@@ -40,31 +58,31 @@ export function ShopScreen() {
       />
       <QueryState query={shop} skeleton={<ListSkeleton rows={4} />}>
         {(data) => (
-          <>
-            <GachaBox shop={data} name={name} avatarKey={avatarKey} />
-            <Tabs defaultValue="all" className="gap-4">
-              <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-                <TabsList className="w-max">
-                  <TabsTrigger value="all">{t("shopAll")}</TabsTrigger>
-                  {KINDS.map((kind) => (
+          <Tabs value={tab} onValueChange={setTab} className="gap-6">
+            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+              <TabsList variant="line" className="w-max justify-start">
+                <TabsTrigger value={GACHA}>
+                  <Gift /> {t("gachaTitle")}
+                </TabsTrigger>
+                {KINDS.map((kind) => {
+                  const Icon = KIND_ICON[kind];
+                  return (
                     <TabsTrigger key={kind} value={kind}>
-                      {t(`kind_${kind}`)}
+                      <Icon /> {t(`kind_${kind}`)}
                     </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-              <TabsContent value="all" className="flex flex-col gap-6">
-                {KINDS.map((kind) => (
-                  <KindSection key={kind} kind={kind} shop={data} name={name} avatarKey={avatarKey} />
-                ))}
+                  );
+                })}
+              </TabsList>
+            </div>
+            <TabsContent value={GACHA}>
+              <GachaBox shop={data} name={name} avatarKey={avatarKey} />
+            </TabsContent>
+            {KINDS.map((kind) => (
+              <TabsContent key={kind} value={kind}>
+                <KindSection kind={kind} shop={data} name={name} avatarKey={avatarKey} />
               </TabsContent>
-              {KINDS.map((kind) => (
-                <TabsContent key={kind} value={kind}>
-                  <KindSection kind={kind} shop={data} name={name} avatarKey={avatarKey} />
-                </TabsContent>
-              ))}
-            </Tabs>
-          </>
+            ))}
+          </Tabs>
         )}
       </QueryState>
     </div>

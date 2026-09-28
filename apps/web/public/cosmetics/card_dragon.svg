@@ -1,0 +1,143 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="120" height="120" viewBox="0 0 120 120">
+<style>
+.breath { animation: breath 3.2s ease-in-out infinite; }
+.node { animation: node 2.4s ease-in-out infinite; }
+.node.b { animation-delay: -1.2s; }
+.flow { animation: flow 2.6s linear infinite; }
+.spin { transform-box: fill-box; transform-origin: center; animation: spin 6s linear infinite; }
+.sweep { animation: sweep 4.5s ease-in-out infinite; }
+@keyframes breath { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes node { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+@keyframes flow { from { transform: translateX(0); } to { transform: translateX(40px); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes sweep { 0%, 55% { transform: translateX(0); } 85%, 100% { transform: translateX(40px); } }
+</style>
+<defs>
+  <clipPath id="cT"><rect x="40" y="0" width="40" height="40"/></clipPath>
+  <clipPath id="cC"><rect x="0" y="0" width="40" height="40"/></clipPath>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.3"/></filter>
+  <filter id="glow2" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.4"/></filter>
+  <linearGradient id="pg">
+    <stop offset="0" stop-color="#f5c542" stop-opacity="0"/><stop offset=".75" stop-color="#f5c542"/><stop offset=".92" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+  </linearGradient>
+
+  <radialGradient id="holo" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="30">
+    <stop offset=".35" stop-color="#e0284a"/><stop offset="1" stop-color="#f5c542"/>
+  </radialGradient>
+  <g id="lampC"><circle r="4.2" fill="#f5c542" filter="url(#glow)" opacity=".9"/><circle r="1.6" fill="#fff3b0"/><circle cx="-.5" cy="-.5" r=".55" fill="#fff"/></g>
+
+  <!-- top edge tile, x 40..80 -->
+  <g id="edge" clip-path="url(#cT)">
+    <rect x="30" y="1" width="60" height="16" fill="#4a2412"/>
+    <rect x="30" y="1" width="60" height="2.4" fill="#8a5a2b"/>
+    <rect x="30" y="14.4" width="60" height="2.6" fill="#3a1410"/>
+    <rect x="30" y="6.5" width="60" height="5" fill="#1f0a08"/>
+    <path d="M30,12.1H90" stroke="#7a4a20" stroke-width="1"/>
+    <path d="M30,2.3H90" stroke="#f5c542" stroke-width="2.2" filter="url(#glow)" class="breath"/>
+    <path d="M30,2.3H90" stroke="#fff0b0" stroke-width=".9"/>
+    <!-- plate seams on the tile boundary + rivets -->
+    <path d="M40,1V6.5M40,11.5V17M80,1V6.5M80,11.5V17" stroke="#1d1a22" stroke-width="1.2"/>
+    <path d="M41.2,3.4V6.5M41.2,12.6V14.4" stroke="#8a5a2b" stroke-width=".8"/>
+    <circle cx="44.6" cy="4.4" r="1.25" fill="#3a1410" stroke="#1d1a22" stroke-width=".6"/><circle cx="44.2" cy="4" r=".45" fill="#e6c27a"/>
+    <circle cx="75.4" cy="4.4" r="1.25" fill="#3a1410" stroke="#1d1a22" stroke-width=".6"/><circle cx="75" cy="4" r=".45" fill="#e6c27a"/>
+    <!-- circuit branches -->
+    <path d="M54,11.5V14.2H48.5M66,11.5V14.2H71.5" fill="none" stroke="#f5c542" stroke-width=".9" opacity=".9"/>
+    <circle cx="48.3" cy="14.2" r="1" fill="#fff3b0"/><circle cx="71.7" cy="14.2" r="1" fill="#fff3b0"/>
+    <!-- trace -->
+    <path d="M30,9H90" stroke="#f5c542" stroke-width="2.8" filter="url(#glow)" class="breath"/>
+    <path d="M30,9H90" stroke="#ffd35a" stroke-width="1"/>
+    <g class="flow">
+      <rect x="13" y="7.3" width="13" height="3.4" rx="1.7" fill="url(#pg)" filter="url(#glow)"/>
+      <rect x="15" y="8.25" width="11" height="1.5" rx=".75" fill="url(#pg)"/>
+      <rect x="53" y="7.3" width="13" height="3.4" rx="1.7" fill="url(#pg)" filter="url(#glow)"/>
+      <rect x="55" y="8.25" width="11" height="1.5" rx=".75" fill="url(#pg)"/>
+    </g>
+    <!-- node -->
+    <circle cx="60" cy="9" r="2.5" fill="#140605" stroke="#1d1a22" stroke-width="1"/>
+    <use xlink:href="#lampC" x="60" y="9" class="node"/>
+    <!-- inner light strip -->
+    <rect x="30" y="18.5" width="60" height="2.6" fill="#3a1410"/>
+    <path d="M30,19.8H90" stroke="#e0284a" stroke-width="3" filter="url(#glow)" class="breath"/>
+    <path d="M30,19.8H90" stroke="#ff9aa8" stroke-width="1.1"/>
+    <path d="M30,1H90M30,17H90M30,6.5H90M30,18.5H90M30,21.1H90" stroke="#1d1a22" stroke-width="1.3"/>
+  </g>
+
+  <!-- corner plate (top-left orientation), shared by all 4 corners -->
+  <g id="plate" clip-path="url(#cC)" stroke-linejoin="round">
+    <path d="M42,1H12L1,12V42H17V20L20,17H42Z" fill="#4a2412"/>
+    <path d="M42,1H12L1,12V42H3.4V13L13,3.4H42Z" fill="#8a5a2b"/>
+    <path d="M42,14.4H19L14.4,19V42H17V20L20,17H42Z" fill="#3a1410"/>
+    <path d="M42,6.5H14L6.5,14V42H11.5V16L16,11.5H42Z" fill="#1f0a08"/>
+    <path d="M42,12.1H16.2L12.1,16.2V42" fill="none" stroke="#7a4a20" stroke-width="1"/>
+    <path d="M42,2.3H12.5L2.3,12.5V42" fill="none" stroke="#f5c542" stroke-width="2.2" filter="url(#glow)" class="breath"/>
+    <path d="M42,2.3H12.5L2.3,12.5V42" fill="none" stroke="#fff0b0" stroke-width=".9"/>
+    <path d="M42,9H15L9,15V42" fill="none" stroke="#f5c542" stroke-width="2.8" filter="url(#glow)" class="breath"/>
+    <path d="M42,9H15L9,15V42" fill="none" stroke="#ffd35a" stroke-width="1"/>
+    <path d="M42,18.5H20.3L18.5,20.3V42H21.1V21.1H42Z" fill="#3a1410"/>
+    <path d="M42,19.8H20.9L19.8,20.9V42" fill="none" stroke="#e0284a" stroke-width="3" filter="url(#glow)" class="breath"/>
+    <path d="M42,19.8H20.9L19.8,20.9V42" fill="none" stroke="#ff9aa8" stroke-width="1.1"/>
+    <path d="M40,1V6.5M40,11.5V17M1,40H6.5M11.5,40H17" stroke="#1d1a22" stroke-width="1.2"/>
+    <path d="M42,1H12L1,12V42M42,17H20L17,20V42M42,6.5H14L6.5,14V42M42,18.5H20.3L18.5,20.3V42M42,21.1H21.1V42" fill="none" stroke="#1d1a22" stroke-width="1.3"/>
+  </g>
+
+  <!-- angular corner bracket -->
+  <path id="bk" d="M36,0H12L0,12V36L9,27V16.5L16.5,9H27Z"/>
+  <clipPath id="cBk"><use xlink:href="#bk"/></clipPath>
+  <g id="bracket" stroke-linejoin="round">
+    <use xlink:href="#bk" fill="#2e140c"/>
+    <g clip-path="url(#cBk)">
+      <use xlink:href="#bk" fill="#6a3a1a" transform="translate(-1.6,-1.6)"/>
+      <path d="M37,0H12L0,12V37H1.8V12.8L12.8,1.8H37Z" fill="#b8860b"/>
+      <g transform="rotate(45)"><rect class="sweep" x="-8" y="-40" width="4" height="80" fill="#fff" opacity=".55"/></g>
+    </g>
+    <use xlink:href="#bk" fill="none" stroke="#1d1a22" stroke-width="1.4"/>
+    <path d="M28,4.6H14L4.6,14V28" fill="none" stroke="#1f0a08" stroke-width="2.6"/>
+    <path d="M28,4.6H14L4.6,14V28" fill="none" stroke="url(#holo)" stroke-width="3" filter="url(#glow)" class="breath"/>
+    <path d="M28,4.6H14L4.6,14V28" fill="none" stroke="#fff0b0" stroke-width="1"/>
+    <path d="M30.6,2.2L32.9,4.5L30.6,6.8M2.2,30.6L4.5,32.9L6.8,30.6" fill="none" stroke="#e0284a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- hex reactor core -->
+  <path id="hex" d="M7,0L3.5,6.06L-3.5,6.06L-7,0L-3.5,-6.06L3.5,-6.06Z"/>
+  <g id="coreBase" stroke-linejoin="round">
+    <use xlink:href="#hex" fill="#3a1410" stroke="#1d1a22" stroke-width="1.4"/>
+    <use xlink:href="#hex" fill="#6a3a1a" transform="translate(-.5,-.5) scale(.8)"/>
+    <path d="M-5.6,0L-2.8,-4.85L2.8,-4.85" fill="none" stroke="#b8860b" stroke-width="1" transform="translate(-.5,-.5)"/>
+    <use xlink:href="#hex" fill="#140605" stroke="#1d1a22" stroke-width=".8" transform="scale(.56)"/>
+  </g>
+</defs>
+
+<!-- edges -->
+<use xlink:href="#edge"/>
+<use xlink:href="#edge" transform="translate(0,120) scale(1,-1)"/>
+<use xlink:href="#edge" transform="matrix(0,1,1,0,0,0)"/>
+<use xlink:href="#edge" transform="matrix(0,1,-1,0,120,0)"/>
+
+<!-- corners: top-right stays calm (pet sits there) -->
+<use xlink:href="#plate"/>
+<use xlink:href="#plate" transform="translate(120,0) scale(-1,1)"/>
+<use xlink:href="#plate" transform="translate(0,120) scale(1,-1)"/>
+<use xlink:href="#plate" transform="translate(120,120) scale(-1,-1)"/>
+<use xlink:href="#bracket"/>
+<use xlink:href="#bracket" transform="translate(0,120) scale(1,-1)"/>
+<use xlink:href="#bracket" transform="translate(120,120) scale(-1,-1)"/>
+
+<g transform="translate(14,14)">
+  <circle r="9.4" fill="none" stroke="#e0284a" stroke-width="1" stroke-dasharray="3.2 2.2" class="spin" opacity=".9"/>
+  <use xlink:href="#coreBase"/>
+  <circle r="6.4" fill="#e0284a" filter="url(#glow2)" class="node"/>
+  <circle r="2.4" fill="#e0284a"/><circle r="1.5" fill="#ff9aa8"/><circle cx="-.8" cy="-.8" r=".7" fill="#fff"/>
+</g>
+<g transform="translate(14,106)">
+  <circle r="9.4" fill="none" stroke="#f5c542" stroke-width="1" stroke-dasharray="3.2 2.2" class="spin" opacity=".9"/>
+  <use xlink:href="#coreBase"/>
+  <circle r="6.4" fill="#f5c542" filter="url(#glow2)" class="node b"/>
+  <circle r="2.4" fill="#f5c542"/><circle r="1.5" fill="#fff3b0"/><circle cx="-.8" cy="-.8" r=".7" fill="#fff"/>
+</g>
+<g transform="translate(106,106)">
+  <circle r="9.4" fill="none" stroke="#e0284a" stroke-width="1" stroke-dasharray="3.2 2.2" class="spin" opacity=".9"/>
+  <use xlink:href="#coreBase"/>
+  <circle r="6.4" fill="#e0284a" filter="url(#glow2)" class="node"/>
+  <circle r="2.4" fill="#e0284a"/><circle r="1.5" fill="#ff9aa8"/><circle cx="-.8" cy="-.8" r=".7" fill="#fff"/>
+</g>
+</svg>
