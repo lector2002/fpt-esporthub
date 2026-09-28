@@ -1,8 +1,10 @@
-import { IsIn, IsInt, IsString, Length, Max, Min, NotEquals } from "class-validator";
-import { TOPUP_PACKAGES } from "../credit-pricing";
+import { IsInt, IsString, Length, Max, Min, NotEquals } from "class-validator";
+import { TOPUP_MAX, TOPUP_MIN } from "../credit-pricing";
 
 export class CreateTopUpDto {
-  @IsIn(TOPUP_PACKAGES)
+  @IsInt()
+  @Min(TOPUP_MIN)
+  @Max(TOPUP_MAX)
   credits!: number;
 }
 

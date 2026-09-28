@@ -2,7 +2,7 @@
 import { strict as assert } from "node:assert";
 import { createHmac } from "node:crypto";
 import { InsufficientCreditsError, applyCredit } from "../src/modules/credits/credit-ledger";
-import { CREDIT_VND, creditsForVnd, topUpPackage } from "../src/modules/credits/credit-pricing";
+import { CREDIT_VND, TOPUP_MAX, TOPUP_MIN, TOPUP_PACKAGES, creditsForVnd, topUpPackage } from "../src/modules/credits/credit-pricing";
 import { createPaymentProvider } from "../src/modules/credits/payment-provider";
 import { isValidWebhookSignature, signPaymentRequest, signWebhookData } from "../src/modules/credits/payos-signature";
 
@@ -73,9 +73,9 @@ async function main() {
     assert.equal(provider.readWebhook("not json"), null);
   });
 
-  await test("only listed packages can be bought and prices come from the server", () => {
-    assert.deepEqual(topUpPackage(50), { credits: 50, amountVnd: 50 * CREDIT_VND });
-    for (const credits of [0, -20, 21, 1_000_000]) assert.equal(topUpPackage(credits), null);
+  await test("any whole number of credits within the limits can be bought and prices come from the server", () => {
+    for (const credits of [...TOPUP_PACKAGES, TOPUP_MIN, 37, TOPUP_MAX]) assert.deepEqual(topUpPackage(credits), { credits, amountVnd: credits * CREDIT_VND });
+    for (const credits of [0, -20, TOPUP_MIN - 1, TOPUP_MAX + 1, 20.5, Number.NaN]) assert.equal(topUpPackage(credits), null);
   });
 
   await test("coaching prices round up to whole credits", () => {

@@ -30,6 +30,8 @@ export interface Wallet {
   transactions: CreditTransaction[];
   topUps: TopUp[];
   packages: { credits: number; amountVnd: number }[];
+  /** Limits for a typed-in amount; the server prices it at creditVnd per credit. */
+  customTopUp: { min: number; max: number; creditVnd: number };
   promotions: { boost: Promotion; feature: Promotion };
   /** Null = top-up turned off on this server. */
   provider: "payos" | "mock" | null;

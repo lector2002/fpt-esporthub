@@ -10,6 +10,7 @@ import { ListSkeleton, QueryState } from "@/components/common/query-state";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
@@ -65,12 +66,23 @@ function BalanceCard({ wallet }: { wallet: Wallet }) {
   );
 }
 
-/** Pick one package, then one pay button. */
+const CUSTOM = "custom";
+
+/** Pick one package or type an amount, then one pay button. The server prices the amount again. */
 function TopUpCard({ wallet }: { wallet: Wallet }) {
   const { t } = useCreditsMessages();
   const create = useCreateTopUp();
   const [selected, setSelected] = useState(String(wallet.packages[0]?.credits ?? ""));
-  const pack = wallet.packages.find((item) => String(item.credits) === selected);
+  const [typed, setTyped] = useState("");
+  const { min, max, creditVnd } = wallet.customTopUp;
+  const typedCredits = Number(typed);
+  const typedValid = Number.isInteger(typedCredits) && typedCredits >= min && typedCredits <= max;
+  const pack =
+    selected === CUSTOM
+      ? typedValid
+        ? { credits: typedCredits, amountVnd: typedCredits * creditVnd }
+        : undefined
+      : wallet.packages.find((item) => String(item.credits) === selected);
   const pay = () =>
     pack &&
     create.mutate(pack.credits, {
@@ -106,7 +118,36 @@ function TopUpCard({ wallet }: { wallet: Wallet }) {
                   <span className="text-sm text-muted-foreground tabular-nums">{formatVnd(item.amountVnd)}</span>
                 </Label>
               ))}
+              <Label
+                htmlFor="pack-custom"
+                className="flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2.5 font-normal has-data-[state=checked]:border-primary has-data-[state=checked]:bg-primary/5"
+              >
+                <RadioGroupItem value={CUSTOM} id="pack-custom" />
+                <span className="flex-1 font-semibold">{t("customAmount")}</span>
+              </Label>
             </RadioGroup>
+            {selected === CUSTOM && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="topup-custom">{t("customLabel")}</Label>
+                <Input
+                  id="topup-custom"
+                  type="number"
+                  inputMode="numeric"
+                  min={min}
+                  max={max}
+                  step={1}
+                  autoFocus
+                  value={typed}
+                  onChange={(event) => setTyped(event.target.value)}
+                  aria-invalid={typed !== "" && !typedValid}
+                  aria-describedby="topup-custom-range"
+                  className="tabular-nums"
+                />
+                <p id="topup-custom-range" className={cn("text-xs text-muted-foreground", typed !== "" && !typedValid && "text-destructive")}>
+                  {t("customRange", { min, max })}
+                </p>
+              </div>
+            )}
             <Button disabled={!pack || create.isPending} onClick={pay}>
               {create.isPending && <Spinner />}
               {pack ? t("payAmount", { amount: formatVnd(pack.amountVnd) }) : t("topUp")}

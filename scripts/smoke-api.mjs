@@ -331,7 +331,7 @@ const coachUser = captains[0];
 const balanceOf = async (player) => (await call("GET", "/credits/me", { token: player.token })).body?.balance;
 const wallet = await expectStatus("wallet", 200, "GET", "/credits/me", { token: buyer.token });
 check("wallet starts empty on the mock provider", wallet?.balance === 0 && wallet?.provider === "mock", JSON.stringify({ balance: wallet?.balance, provider: wallet?.provider }));
-await expectStatus("unknown package is refused", 400, "POST", "/credits/topups", { token: buyer.token, body: { credits: 7 } });
+await expectStatus("top-up below the minimum is refused", 400, "POST", "/credits/topups", { token: buyer.token, body: { credits: 7 } });
 const order = (await expectStatus("create top-up", 201, "POST", "/credits/topups", { token: buyer.token, body: { credits: 50 } }))?.topUp;
 check("top-up is priced by the server", order?.amountVnd === 50000 && order?.status === "PENDING", JSON.stringify(order));
 await expectStatus("someone else can't pay my order", 404, "POST", `/credits/topups/${order?.orderCode}/mock-pay`, { token: coachUser.token });

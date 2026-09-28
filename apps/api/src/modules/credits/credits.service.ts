@@ -10,7 +10,7 @@ import {
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { RealtimeService } from "../realtime/realtime.service";
-import { TOPUP_PACKAGES, creditsCoachingEnabled, topUpPackage } from "./credit-pricing";
+import { CREDIT_VND, TOPUP_MAX, TOPUP_MIN, TOPUP_PACKAGES, creditsCoachingEnabled, topUpPackage } from "./credit-pricing";
 import { InsufficientCreditsError, applyCredit, isDuplicateRef, type LedgerEntry } from "./credit-ledger";
 import { PAYMENT_PROVIDER, type PaymentProvider } from "./payment-provider";
 import { PROMOTIONS } from "./promotion";
@@ -45,6 +45,7 @@ export class CreditsService {
       transactions,
       topUps,
       packages: TOPUP_PACKAGES.map((credits) => topUpPackage(credits)!),
+      customTopUp: { min: TOPUP_MIN, max: TOPUP_MAX, creditVnd: CREDIT_VND },
       promotions: PROMOTIONS,
       coachingInCredits: creditsCoachingEnabled(),
       provider: this.provider?.name ?? null,

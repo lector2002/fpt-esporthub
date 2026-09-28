@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createPlayer, loginUser, SEEDED_ADMIN, setEnglish, signIn, toast } from "./helpers";
+import { apiCall, createPlayer, loginUser, SEEDED_ADMIN, setEnglish, signIn, toast } from "./helpers";
 
 // Needs the API running with PAYMENT_PROVIDER=mock (or no payOS keys).
 const LOL = "league_of_legends";
@@ -53,6 +53,30 @@ test("a player tops up through checkout and spends credits on a boost", async ({
   await expect(topUp).toContainText(/20[.,]000/);
   await expect(topUp).toContainText("Paid");
   await adminContext.close();
+});
+
+test("a player tops up a typed-in amount and amounts outside the limits can't be paid", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const player = await createPlayer("E2E Custom Top-up", [LOL]);
+  const { customTopUp } = await apiCall<{ customTopUp: { min: number; max: number; creditVnd: number } }>("/credits/me", { token: player.token });
+  const credits = customTopUp.min + 7;
+  await signIn(page, player, LOL);
+  await page.goto("/wallet");
+
+  await page.getByRole("radio", { name: "Other amount" }).check();
+  const amount = page.getByRole("spinbutton", { name: "Credits to add" });
+  await amount.fill(String(customTopUp.max + 1));
+  await expect(amount).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByRole("button", { name: "Top up" })).toBeDisabled();
+
+  await amount.fill(String(credits));
+  const vnd = new Intl.NumberFormat("vi-VN").format(credits * customTopUp.creditVnd);
+  await page.getByRole("button", { name: new RegExp(`^Pay ${vnd.replaceAll(".", "\\.")}`) }).click();
+  await expect(page).toHaveURL(/\/wallet\/checkout\?order=\d+$/);
+  await page.getByRole("button", { name: "Pay", exact: true }).click();
+
+  await expect(toast(page, `Added ${credits} credits`)).toBeVisible();
+  await expect(page.getByTestId("credit-balance")).toContainText(String(credits));
 });
 
 test("an admin grants credits from the credit ledger", async ({ page, browser }) => {
