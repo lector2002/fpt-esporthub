@@ -107,8 +107,8 @@ function Hero({ t, authenticated }: { t: LandingT; authenticated: boolean }) {
   );
 }
 
-const INTRO_YOUTUBE_ID = "SuZqT-xWnIo";
-const INTRO_POSTER = "/videos/fpt-esporthub-intro-v2-poster.webp";
+const INTRO_YOUTUBE_ID = "wbVGQ4t9Q5Q";
+const INTRO_POSTER = "/videos/fpt-esporthub-intro-showreel-poster.webp";
 const VIDEO_FRAME = "aspect-video w-full overflow-hidden rounded-xl border border-border bg-card";
 
 /** Poster until clicked, then YouTube (streams from caches inside Vietnamese ISPs). */
