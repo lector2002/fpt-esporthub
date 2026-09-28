@@ -1,31 +1,40 @@
 /**
  * How each catalog id looks. Ids come from the API (apps/api cosmetics/catalog.ts); unknown ids render as nothing.
- * Rare and epic items use the animated `fx-*` classes in ./fx.css; keep their art in step with their rarity there.
+ * Rare and epic frames, cards and banners are illustrated SVGs in public/cosmetics (animated inside the SVG); the rest
+ * are Tailwind or the `fx-*` classes in ./fx.css.
  */
 export const FRAME_LOOK: Record<string, string> = {
   frame_frost: "bg-linear-to-br from-sky-100 via-cyan-400 to-blue-600",
   frame_sakura: "bg-linear-to-br from-pink-100 via-pink-400 to-rose-500",
-  frame_gold: "fx-frame-gold",
-  frame_ember: "fx-frame-ember",
-  frame_neon: "fx-frame-neon",
+};
+
+/** Drawn over the avatar at 1.5x its size; the avatar circle is the middle two thirds of the art. */
+export const FRAME_ART: Record<string, string> = {
+  frame_gold: "/cosmetics/frame_gold.svg",
+  frame_ember: "/cosmetics/frame_ember.svg",
+  frame_neon: "/cosmetics/frame_neon.svg",
 };
 
 export const BANNER_LOOK: Record<string, string> = {
   banner_sunset: "bg-linear-to-r from-orange-400 via-rose-500 to-purple-600",
   banner_ocean: "bg-linear-to-r from-cyan-500 via-sky-600 to-indigo-700",
-  banner_ember: "fx-banner-ember",
-  banner_night: "fx-banner-night relative overflow-hidden",
-  banner_aurora: "fx-banner-aurora fx-sheen relative overflow-hidden",
+  banner_ember: "bg-[url(/cosmetics/banner_ember.svg)] bg-cover bg-center",
+  banner_night: "bg-[url(/cosmetics/banner_night.svg)] bg-cover bg-center",
+  banner_aurora: "bg-[url(/cosmetics/banner_aurora.svg)] bg-cover bg-center",
 };
 
-/** Card decoration: classes added to the whole card. */
+/** Common card decoration: classes added to the whole card. */
 export const CARD_LOOK: Record<string, string> = {
   card_frost: "ring-2 ring-sky-300/70 shadow-lg shadow-sky-400/20 bg-linear-to-b from-sky-300/15 via-card to-card",
   card_carbon:
     "ring-2 ring-zinc-400/50 bg-[repeating-linear-gradient(135deg,rgb(255_255_255/0.035)_0_6px,transparent_6px_12px)]",
-  card_gold: "fx-card fx-card-gold",
-  card_ember: "fx-card fx-card-ember",
-  card_neon: "fx-card fx-card-neon",
+};
+
+/** Illustrated card borders: a 120px SVG cut into a 9-slice at 40px (see CardDecoration). `peek` = pet drawn at the top edge. */
+export const CARD_ART: Record<string, { src: string; peek?: string }> = {
+  card_gold: { src: "/cosmetics/card_gold.svg" },
+  card_ember: { src: "/cosmetics/card_ember.svg" },
+  card_neon: { src: "/cosmetics/card_neon.svg", peek: "pet_neonwyrm" },
 };
 
 export const NAME_COLOR_LOOK: Record<string, string> = {

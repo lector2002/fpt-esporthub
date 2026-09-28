@@ -10,7 +10,7 @@ import { CARD_HOVER, CardLink } from "@/components/common/card-link";
 import { playerArtUrl, SplashBanner } from "@/components/common/champion-splash";
 import { RankEmblem } from "@/components/common/rank-emblem";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { CosmeticBanner, CosmeticFrame, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
+import { CardDecoration, CosmeticBanner, CosmeticFrame, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
 import { formatRank } from "@/lib/contracts";
 import { mediaUrl } from "@/lib/media";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,7 @@ export function CoachCard({ coach }: { coach: CoachSummary }) {
   return (
     <Card size="sm" className={cn("h-full pt-0", CARD_HOVER, cardLookClass(coach.cosmetics.card))}>
       <CardLink href={`/coaches/${coach.id}`} />
+      <CardDecoration card={coach.cosmetics.card} width={20} />
       {coach.coverKey ? (
         <SplashBanner src={mediaUrl(coach.coverKey)} className="h-16" />
       ) : coach.cosmetics.banner ? (

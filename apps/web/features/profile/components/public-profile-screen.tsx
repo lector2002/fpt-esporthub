@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { avatarPaths } from "@/features/media/api";
 import { AchievementsCard } from "@/features/media/components/achievement-gallery";
-import { CosmeticBanner, CosmeticFrame, CosmeticTitle, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
+import { CardDecoration, CosmeticBanner, CosmeticFrame, CosmeticTitle, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
 import { CoverEditor, PictureEditor } from "@/features/media/components/picture-editor";
 import { SendRequestButton } from "@/features/requests/components/send-request-button";
 import { PlaystyleSummary } from "@/features/questionnaire/components/playstyle-summary";
@@ -128,13 +128,15 @@ function PublicProfile({ data, viewerGame }: { data: PublicProfileResponse; view
   return (
     <div className="flex flex-col gap-6">
       <Card className={cn("overflow-hidden pt-0", cardLookClass(cosmetics.card))}>
+        <CardDecoration card={cosmetics.card} />
         {banner ? (
           <CosmeticBanner banner={banner} className="h-32 sm:h-40" />
         ) : (
           <CoverEditor imageKey={data.user.coverKey} fallback={art} paths={avatarPaths(data.user.id, user, "cover")} className="h-32 sm:h-40" />
         )}
-        <CardContent className="relative -mt-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex min-w-0 items-end gap-4">
+        <CardContent className="relative -mt-12 flex flex-col gap-4 px-6 pb-2 sm:flex-row sm:items-end sm:justify-between sm:px-8">
+          {/* The avatar overlaps the banner; the name starts below it so it never sits on the picture. */}
+          <div className="flex min-w-0 items-start gap-6">
             <CosmeticFrame frame={cosmetics.frame} pet={cosmetics.pet}>
               <PictureEditor
                 name={data.user.displayName}
@@ -143,7 +145,7 @@ function PublicProfile({ data, viewerGame }: { data: PublicProfileResponse; view
                 className="size-20 text-2xl ring-4 ring-card"
               />
             </CosmeticFrame>
-            <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-1.5 pt-14">
               <h1 className={cn("truncate text-2xl font-semibold tracking-tight", nameColorClass(cosmetics.nameColor))}>{data.user.displayName}</h1>
               <CosmeticTitle title={cosmetics.title} />
               <div className="flex flex-wrap items-center gap-2">

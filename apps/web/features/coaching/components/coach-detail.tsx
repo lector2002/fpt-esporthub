@@ -14,7 +14,7 @@ import { playerArtUrl, SplashBanner } from "@/components/common/champion-splash"
 import { EmptyState, QueryState } from "@/components/common/query-state";
 import { RankEmblem } from "@/components/common/rank-emblem";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { CosmeticBanner, CosmeticFrame, CosmeticTitle, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
+import { CardDecoration, CosmeticBanner, CosmeticFrame, CosmeticTitle, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
 import { useWallet } from "@/features/credits/api";
 import { AchievementsCard } from "@/features/media/components/achievement-gallery";
 import { mediaUrl } from "@/lib/media";
@@ -85,6 +85,7 @@ function CoachHeader({ coach }: { coach: CoachSummary }) {
   const { t } = useCoachingMessages();
   return (
     <Card className={cn("overflow-hidden pt-0", cardLookClass(coach.cosmetics.card))}>
+      <CardDecoration card={coach.cosmetics.card} />
       <CoachBanner coach={coach} />
       <CardContent className="relative -mt-12 flex flex-col gap-5">
         <div className="flex items-end gap-4">

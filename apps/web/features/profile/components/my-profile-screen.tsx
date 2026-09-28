@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { avatarPaths } from "@/features/media/api";
 import { AchievementGallery } from "@/features/media/components/achievement-gallery";
-import { CosmeticBanner, CosmeticFrame, CosmeticTitle, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
+import { CardDecoration, CosmeticBanner, CosmeticFrame, CosmeticTitle, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
 import { CosmeticsLocker } from "@/features/cosmetics/components/cosmetics-locker";
 import { CoverEditor, PictureEditor } from "@/features/media/components/picture-editor";
 import { useMediaMessages } from "@/features/media/messages";
@@ -77,12 +77,13 @@ function IdentityCard({ user, profile, game }: { user: MyProfileResponse["user"]
   const media = useMediaMessages().t;
   return (
     <Card className={cn("overflow-hidden py-0", cardLookClass(user.cosmetics.card))}>
+      <CardDecoration card={user.cosmetics.card} />
       {user.cosmetics.banner ? (
         <CosmeticBanner banner={user.cosmetics.banner} className="h-28 sm:h-40" />
       ) : (
         <CoverEditor imageKey={user.coverKey} fallback={playerArtUrl(game, profile, user.id)} paths={avatarPaths(user.id, user, "cover")} className="h-28 sm:h-40" />
       )}
-      <div className="relative -mt-10 flex flex-wrap items-end gap-x-4 gap-y-2 px-4 pb-4 sm:px-6">
+      <div className="relative -mt-10 flex flex-wrap items-end gap-x-6 gap-y-2 px-6 pb-6 sm:px-8">
         <CosmeticFrame frame={user.cosmetics.frame} pet={user.cosmetics.pet}>
           <PictureEditor name={user.displayName} imageKey={user.avatarKey} paths={avatarPaths(user.id, user)} className="size-20 text-2xl ring-4 ring-card sm:size-24" />
         </CosmeticFrame>

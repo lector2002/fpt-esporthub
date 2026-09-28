@@ -3,31 +3,45 @@
 import { Award, Circle, Crown, Gem, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Rarity } from "../api";
-import { BANNER_LOOK, CARD_LOOK, FRAME_LOOK, NAME_COLOR_LOOK, PET_FX, PET_SPRITE, RARITY_LOOK, TITLE_TIER } from "../looks";
+import { BANNER_LOOK, CARD_ART, CARD_LOOK, FRAME_ART, FRAME_LOOK, NAME_COLOR_LOOK, PET_FX, PET_SPRITE, RARITY_LOOK, TITLE_TIER } from "../looks";
 import { type CosmeticsMessageKey, useCosmeticsMessages } from "../messages";
 
-/** Gradient ring around an avatar, with the pet sitting at its lower right; renders the avatar alone without either. */
+/**
+ * Avatar frame: an illustrated decoration drawn over the avatar at 1.5x its size (rare and epic), or a gradient ring
+ * (common). The pet sits at the lower right. Renders the avatar alone without either.
+ */
 export function CosmeticFrame({ frame, pet, children, className }: { frame: string | null | undefined; pet?: string | null; children: React.ReactNode; className?: string }) {
-  const look = frame ? FRAME_LOOK[frame] : undefined;
-  const framed = look ? (
-    <div className={cn("shrink-0 rounded-full p-[3px]", look, className)} data-frame={frame}>
+  const art = frame ? FRAME_ART[frame] : undefined;
+  const ring = frame && !art ? FRAME_LOOK[frame] : undefined;
+  const framed = ring ? (
+    <div className={cn("shrink-0 rounded-full p-[3px]", ring, className)} data-frame={frame}>
       <div className="rounded-full bg-background p-[2px]">{children}</div>
     </div>
   ) : (
     children
   );
-  if (!pet || !PET_SPRITE[pet]) return <>{framed}</>;
+  const petShown = Boolean(pet && PET_SPRITE[pet]);
+  if (!art && !petShown) return <>{framed}</>;
   return (
-    <div className="relative shrink-0">
+    <div className={cn("relative shrink-0", art && className)} data-frame={art ? frame : undefined}>
       {framed}
-      <CosmeticPet pet={pet} className="absolute -right-[8%] -bottom-[2%] h-[52%]" />
+      {art && <img src={art} alt="" aria-hidden className="pointer-events-none absolute -top-1/4 -left-1/4 size-[150%] max-w-none select-none" />}
+      {petShown && <CosmeticPet pet={pet!} className="absolute -right-[8%] -bottom-[2%] h-[52%]" />}
     </div>
   );
 }
 
-export function CosmeticPet({ pet, className }: { pet: string; className?: string }) {
+export function CosmeticPet({ pet, className, style }: { pet: string; className?: string; style?: React.CSSProperties }) {
   const { t } = useCosmeticsMessages();
-  return <span role="img" aria-label={t(pet as CosmeticsMessageKey)} className={cn("pet-sprite relative block", PET_FX[pet], className)} style={{ backgroundImage: `url(${PET_SPRITE[pet]})` }} data-pet={pet} />;
+  return (
+    <span
+      role="img"
+      aria-label={t(pet as CosmeticsMessageKey)}
+      className={cn("pet-sprite relative block", PET_FX[pet], className)}
+      style={{ ...style, backgroundImage: `url(${PET_SPRITE[pet]})` }}
+      data-pet={pet}
+    />
+  );
 }
 
 export function CosmeticBanner({ banner, className }: { banner: string | null | undefined; className?: string }) {
@@ -36,9 +50,22 @@ export function CosmeticBanner({ banner, className }: { banner: string | null | 
   return <div className={cn("h-24 w-full", look, className)} data-banner={banner} aria-hidden />;
 }
 
-/** Classes for a card wearing a card decoration; add them to the card's own className. */
+/** Classes for a card wearing a card decoration; add them to the card's own className, and put `<CardDecoration>` inside it. */
 export function cardLookClass(card: string | null | undefined) {
-  return card ? CARD_LOOK[card] : undefined;
+  if (!card) return undefined;
+  return CARD_ART[card] ? "relative" : CARD_LOOK[card];
+}
+
+/** Illustrated card border (a 9-slice SVG) laid over the card's edges, plus the epic card's peeking pet. */
+export function CardDecoration({ card, width = 28 }: { card: string | null | undefined; width?: number }) {
+  const art = card ? CARD_ART[card] : undefined;
+  if (!art) return null;
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-[3] rounded-[inherit]" data-card={card}>
+      <div className="absolute inset-0 border-solid" style={{ borderWidth: width, borderImage: `url(${art.src}) 40 / ${width}px round` }} />
+      {art.peek && <CosmeticPet pet={art.peek} className="absolute top-0 right-[12%]" style={{ height: width * 1.7 }} />}
+    </div>
+  );
 }
 
 export function nameColorClass(nameColor: string | null | undefined) {

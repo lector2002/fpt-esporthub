@@ -7,7 +7,7 @@ import { ABOVE_CARD_LINK, CARD_HOVER, CardLink } from "@/components/common/card-
 import { playerArtUrl, SplashBanner } from "@/components/common/champion-splash";
 import { RankEmblem } from "@/components/common/rank-emblem";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { CosmeticBanner, CosmeticFrame, CosmeticTitle, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
+import { CardDecoration, CosmeticBanner, CosmeticFrame, CosmeticTitle, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +32,7 @@ export function MatchCard({ match, aram = false }: { match: MatchResult; aram?: 
   return (
     <Card className={cn("flex flex-col gap-3 p-4 pt-0", CARD_HOVER, match.type === "player" && cardLookClass(match.cosmetics.card))}>
       <CardLink href={href} />
+      {match.type === "player" && <CardDecoration card={match.cosmetics.card} width={20} />}
       <CardBanner match={match} />
       <div className="relative -mt-9 flex items-start gap-3">
         <CosmeticFrame frame={match.type === "player" ? match.cosmetics.frame : null} pet={match.type === "player" ? match.cosmetics.pet : null}>

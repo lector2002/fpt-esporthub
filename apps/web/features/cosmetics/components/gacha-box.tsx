@@ -16,6 +16,7 @@ import { CosmeticPreview } from "./shop-item";
 const RARITY_ORDER: Rarity[] = ["common", "rare", "epic"];
 /** How long the box shakes before the item shows, so the reveal reads as one. */
 const REVEAL_MS = 900;
+const BOX_ART = "/cosmetics/mystery_box.svg";
 
 export function GachaBox({ shop, name, avatarKey }: { shop: CosmeticsShop; name: string; avatarKey: string | null }) {
   const { t } = useCosmeticsMessages();
@@ -43,13 +44,11 @@ export function GachaBox({ shop, name, avatarKey }: { shop: CosmeticsShop; name:
   return (
     <section
       aria-labelledby="gacha-title"
-      className="relative isolate overflow-hidden rounded-xl bg-linear-to-br from-violet-600/25 via-fuchsia-500/10 to-amber-400/20 p-5 ring-1 ring-foreground/10 sm:p-6"
+      className="relative isolate overflow-hidden rounded-xl bg-linear-to-br from-amber-600/20 via-card to-orange-700/15 p-5 ring-1 ring-foreground/10 sm:p-6"
       data-testid="gacha"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="grid size-16 shrink-0 place-items-center rounded-2xl bg-linear-to-br from-violet-500 via-fuchsia-500 to-amber-400 text-white shadow-lg shadow-fuchsia-500/30 sm:size-20">
-          <Gift className="size-8 sm:size-10" aria-hidden />
-        </div>
+        <img src={BOX_ART} alt="" aria-hidden className="size-20 shrink-0 drop-shadow-[0_6px_14px_rgb(245_158_11/0.25)] sm:size-24" />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div>
             <h2 id="gacha-title" className="text-lg font-semibold">
@@ -82,11 +81,11 @@ export function GachaBox({ shop, name, avatarKey }: { shop: CosmeticsShop; name:
   );
 }
 
-/** The box glows in the color of what is inside a moment before it opens. */
+/** The chest glows in the color of what is inside a moment before it opens. */
 const INSIDE_HINT: Record<Rarity, string> = {
-  common: "",
-  rare: "ring-4 ring-sky-400/70 shadow-sky-400/60",
-  epic: "fx-sheen relative overflow-hidden ring-4 ring-fuchsia-400/80 shadow-fuchsia-500/70",
+  common: "drop-shadow-[0_0_12px_rgb(245_158_11/0.45)]",
+  rare: "drop-shadow-[0_0_18px_rgb(56_189_248/0.9)]",
+  epic: "drop-shadow-[0_0_22px_rgb(217_70_239/0.95)]",
 };
 
 function Opening({ inside }: { inside?: Rarity }) {
@@ -98,9 +97,7 @@ function Opening({ inside }: { inside?: Rarity }) {
         <DialogDescription>{t("gachaTitle")}</DialogDescription>
       </DialogHeader>
       <div className="grid h-48 place-items-center">
-        <div className={cn("grid size-24 place-items-center rounded-3xl bg-linear-to-br from-violet-500 via-fuchsia-500 to-amber-400 text-white shadow-xl shadow-fuchsia-500/40 transition-shadow duration-500 motion-safe:animate-bounce", inside && INSIDE_HINT[inside])}>
-          <Gift className="size-12" aria-hidden />
-        </div>
+        <img src={BOX_ART} alt="" aria-hidden className={cn("size-32 transition-[filter] duration-500 motion-safe:animate-bounce", inside ? INSIDE_HINT[inside] : INSIDE_HINT.common)} />
       </div>
     </>
   );

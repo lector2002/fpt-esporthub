@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { type CosmeticItem, type Rarity, useBuyCosmetic, useEquipCosmetic } from "../api";
 import { RARITY_LOOK } from "../looks";
 import { type CosmeticsMessageKey, useCosmeticsMessages } from "../messages";
-import { CosmeticBanner, CosmeticFrame, CosmeticPet, CosmeticTitle, RarityBadge, cardLookClass, nameColorClass } from "./cosmetic-parts";
+import { CardDecoration, CosmeticBanner, CosmeticFrame, CosmeticPet, CosmeticTitle, RarityBadge, cardLookClass, nameColorClass } from "./cosmetic-parts";
 
 export const KINDS: CosmeticKind[] = ["pet", "frame", "banner", "nameColor", "title", "card"];
 
@@ -70,22 +70,23 @@ export function ShopItem({ item, owned, equipped, name, avatarKey }: { item: Cos
   );
 }
 
-/** The item worn by the viewer: avatar, name and title, or a banner strip. */
+/** The item worn by the viewer: avatar, name and title, a banner scene, a mini card, or the pet. Tall enough to show the art. */
 export function CosmeticPreview({ item, name, avatarKey, className }: { item: CosmeticItem; name: string; avatarKey: string | null; className?: string }) {
-  if (item.kind === "banner") return <CosmeticBanner banner={item.id} className={cn("h-16", className)} />;
+  const box = cn("flex h-24 items-center gap-4 px-4", RARITY_LOOK[item.rarity].wash, className);
+  if (item.kind === "banner") return <CosmeticBanner banner={item.id} className={cn("h-24", className)} />;
   if (item.kind === "pet") {
     return (
-      <div className={cn("flex h-16 items-end justify-center", RARITY_LOOK[item.rarity].wash, className)}>
-        <CosmeticPet pet={item.id} className="h-15" />
+      <div className={cn(box, "items-end justify-center")}>
+        <CosmeticPet pet={item.id} className="h-22" />
       </div>
     );
   }
   const identity = (
     <>
       <CosmeticFrame frame={item.kind === "frame" ? item.id : null}>
-        <UserAvatar name={name} imageKey={avatarKey} className="size-9" />
+        <UserAvatar name={name} imageKey={avatarKey} className={item.kind === "frame" ? "size-14" : "size-10"} />
       </CosmeticFrame>
-      <div className="flex min-w-0 flex-col">
+      <div className={cn("flex min-w-0 flex-col", item.kind === "frame" && "pl-2")}>
         <span className={cn("truncate text-sm font-semibold", item.kind === "nameColor" && nameColorClass(item.id))}>{name}</span>
         {item.kind === "title" && <CosmeticTitle title={item.id} />}
       </div>
@@ -93,10 +94,13 @@ export function CosmeticPreview({ item, name, avatarKey, className }: { item: Co
   );
   if (item.kind === "card") {
     return (
-      <div className={cn("flex h-16 items-center px-3", RARITY_LOOK[item.rarity].wash, className)}>
-        <div className={cn("flex h-11 w-full items-center gap-3 rounded-md bg-card px-2", cardLookClass(item.id))}>{identity}</div>
+      <div className={cn(box, "px-3")}>
+        <div className={cn("relative flex h-20 w-full items-center gap-3 overflow-hidden rounded-lg bg-card px-6", cardLookClass(item.id))}>
+          <CardDecoration card={item.id} width={18} />
+          {identity}
+        </div>
       </div>
     );
   }
-  return <div className={cn("flex h-16 items-center gap-3 px-3", RARITY_LOOK[item.rarity].wash, className)}>{identity}</div>;
+  return <div className={box}>{identity}</div>;
 }
