@@ -59,3 +59,20 @@ test("spends use reward credits first and the first top-up gives Solara", async 
   expect(shop.owned).toContain("pet_solara");
   expect(shop.equipped.pet).toBe("pet_solara");
 });
+
+test("the gold tab on the right edge opens rewards and what's on now, and closing the popup keeps it there", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const player = await createPlayer("E2E Rewards Drawer", [LOL]);
+  await signIn(page, player, LOL);
+  await page.goto("/dashboard");
+  await page.getByTestId("daily-reward").getByRole("button", { name: "Nice" }).click();
+
+  await page.getByTestId("rewards-drawer-tab").click();
+  const drawer = page.getByTestId("rewards-drawer");
+  await expect(drawer).toContainText("1-day streak");
+  await expect(drawer).toContainText("Get the Solara pet");
+  await expect(drawer.getByRole("link", { name: /Limited banner · Hiyuki/ })).toHaveAttribute("href", "/shop?banner=limited_hiyuki");
+  await drawer.getByRole("link", { name: "See all tournaments" }).click();
+  await expect(page).toHaveURL(/\/events$/);
+  await expect(drawer).toBeHidden();
+});

@@ -109,7 +109,7 @@ export function RewardsCard({ rewards }: { rewards: Rewards }) {
 }
 
 /** One step per day of the streak cycle; the last carries the bonus. */
-function StreakSteps({ rewards, className }: { rewards: Rewards; className?: string }) {
+export function StreakSteps({ rewards, className }: { rewards: Rewards; className?: string }) {
   const { t } = useCreditsMessages();
   const { rules, streak } = rewards;
   // Where the streak sits in the current cycle, 0..every (0 = no streak).
@@ -136,7 +136,7 @@ function StreakSteps({ rewards, className }: { rewards: Rewards; className?: str
 }
 
 /** The three perks. `topUpLink` adds a link to the wallet on the first top-up perk while the pet isn't owned. */
-function RewardPerks({ rewards, topUpLink, onNavigate }: { rewards: Rewards; topUpLink?: boolean; onNavigate?: () => void }) {
+export function RewardPerks({ rewards, topUpLink, onNavigate }: { rewards: Rewards; topUpLink?: boolean; onNavigate?: () => void }) {
   const { t } = useCreditsMessages();
   const cosmetics = useCosmeticsMessages();
   const { rules, firstTopUpPet } = rewards;
