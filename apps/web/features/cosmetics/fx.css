@@ -119,38 +119,88 @@
     radial-gradient(1.5px 1.5px at 76% 96%, #f0abfc, transparent);
 }
 
-/* Gacha opening (gacha-stage.tsx): rumble while the pull runs, shake harder over --shake-ms, flash, sparks fly
-   out along --dx/--dy, and the item rises out of the chest then floats. */
+/* Gacha opening (gacha-stage.tsx). Light color comes from --gacha-rgb ("r g b"), charge length from --charge-ms.
+   Rumble while the pull runs; charge = fast jitter whose strength (--gacha-amp) grows, a glow that swells and light
+   leaking from the lid seam; burst = quake, flash, two shockwaves, a light beam, sparks along --dx/--dy and turning
+   rays; then the item rises out of the chest and floats among twinkles. */
+@property --gacha-amp {
+  syntax: "<number>";
+  initial-value: 0;
+  inherits: false;
+}
 @keyframes gacha-rumble {
   0%, 100% { transform: translateY(0) rotate(0); }
   25% { transform: translateY(-3px) rotate(-1.5deg); }
   75% { transform: translateY(-1px) rotate(1.5deg); }
 }
-@keyframes gacha-shake {
-  0% { transform: translate(0, 0) rotate(0) scale(1); }
-  10% { transform: translate(-2px, -2px) rotate(-3deg) scale(1.02); }
-  20% { transform: translate(2px, -1px) rotate(3deg) scale(1.02); }
-  30% { transform: translate(-3px, -4px) rotate(-5deg) scale(1.04); }
-  40% { transform: translate(3px, -3px) rotate(5deg) scale(1.04); }
-  50% { transform: translate(-4px, -6px) rotate(-7deg) scale(1.06); }
-  60% { transform: translate(4px, -5px) rotate(7deg) scale(1.07); }
-  70% { transform: translate(-5px, -8px) rotate(-9deg) scale(1.08); }
-  80% { transform: translate(5px, -8px) rotate(9deg) scale(1.1); }
-  90% { transform: translate(-6px, -10px) rotate(-10deg) scale(1.12); }
-  100% { transform: translate(0, -12px) rotate(0) scale(1.15); }
+@keyframes gacha-amp {
+  from { --gacha-amp: 0.15; }
+  to { --gacha-amp: 1; }
+}
+@keyframes gacha-jitter {
+  0%, 100% { transform: translate(0, calc(var(--gacha-amp) * -10px)) rotate(0) scale(calc(1 + var(--gacha-amp) * 0.12)); }
+  25% { transform: translate(calc(var(--gacha-amp) * -6px), calc(var(--gacha-amp) * -13px)) rotate(calc(var(--gacha-amp) * -9deg)) scale(calc(1 + var(--gacha-amp) * 0.12)); }
+  75% { transform: translate(calc(var(--gacha-amp) * 6px), calc(var(--gacha-amp) * -7px)) rotate(calc(var(--gacha-amp) * 9deg)) scale(calc(1 + var(--gacha-amp) * 0.12)); }
+}
+@keyframes gacha-charge {
+  from { opacity: 0.15; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1.3); }
+}
+@keyframes gacha-glow {
+  0%, 100% { opacity: 0.8; transform: scale(1.2); }
+  50% { opacity: 1; transform: scale(1.35); }
+}
+@keyframes gacha-seam {
+  0% { opacity: 0; transform: scale(0.2, 0.4); }
+  30% { opacity: 0.6; transform: scale(0.5, 0.6); }
+  100% { opacity: 1; transform: scale(1.05, 2.6); }
+}
+@keyframes gacha-quake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-7px, 4px); }
+  40% { transform: translate(6px, -5px); }
+  60% { transform: translate(-4px, 3px); }
+  80% { transform: translate(3px, -2px); }
+}
+@keyframes gacha-pop {
+  0% { transform: translateY(-12px) scale(1.15); }
+  35% { transform: translateY(-4px) scale(1.28); }
+  100% { transform: translateY(0) scale(1); }
 }
 @keyframes gacha-flash {
-  0% { opacity: 0; transform: scale(0.4); }
-  25% { opacity: 1; transform: scale(1.1); }
-  100% { opacity: 0; transform: scale(1.6); }
+  0% { opacity: 0; transform: scale(0.3); }
+  20% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+@keyframes gacha-shockwave {
+  from { opacity: 0.95; transform: scale(0.2); }
+  to { opacity: 0; transform: scale(3.4); }
+}
+@keyframes gacha-beam {
+  0% { opacity: 0; transform: scaleY(0) scaleX(0.4); }
+  40% { opacity: 1; transform: scaleY(1.08) scaleX(1.1); }
+  100% { opacity: 0.85; transform: scaleY(1) scaleX(1); }
+}
+@keyframes gacha-beam-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 0.55; }
+}
+@keyframes gacha-rays-in {
+  from { opacity: 0; transform: scale(0.3); }
+  to { opacity: 1; transform: scale(1); }
 }
 @keyframes gacha-spark {
-  0% { opacity: 1; transform: translate(0, 0) scale(1.4); }
+  0% { opacity: 1; transform: translate(0, 0) scale(1.6); }
+  70% { opacity: 1; }
   100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); }
 }
+@keyframes gacha-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; transform: scale(1); }
+}
 @keyframes gacha-rise {
-  0% { opacity: 0; transform: translateY(140px) scale(0.2); }
-  60% { opacity: 1; transform: translateY(-14px) scale(1.06); }
+  0% { opacity: 0; transform: translateY(150px) scale(0.2); }
+  60% { opacity: 1; transform: translateY(-16px) scale(1.08); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes gacha-bob {
@@ -161,24 +211,64 @@
   animation: gacha-rumble 0.35s ease-in-out infinite;
 }
 .gacha-shake {
-  animation: gacha-shake var(--shake-ms, 1s) ease-in forwards;
+  animation: gacha-amp var(--charge-ms, 2s) ease-in forwards, gacha-jitter 0.14s linear infinite;
+}
+.gacha-charge {
+  animation: gacha-charge var(--charge-ms, 2s) ease-in forwards;
+}
+.gacha-glow {
+  animation: gacha-glow 1.8s ease-in-out infinite;
+}
+.gacha-seam {
+  box-shadow: 0 0 10px 3px rgb(var(--gacha-rgb)), 0 0 34px 12px rgb(var(--gacha-rgb) / 0.6);
+  filter: blur(1.5px);
+  mix-blend-mode: screen;
+  animation: gacha-seam var(--charge-ms, 2s) ease-in forwards;
+}
+.gacha-quake {
+  animation: gacha-quake 0.45s ease-out;
+}
+.gacha-pop {
+  animation: gacha-pop 0.55s cubic-bezier(0.3, 1.5, 0.5, 1) both;
 }
 .gacha-flash {
-  animation: gacha-flash 0.45s ease-out forwards;
+  animation: gacha-flash 0.6s ease-out forwards;
+}
+.gacha-shockwave {
+  box-shadow: 0 0 24px rgb(var(--gacha-rgb) / 0.8), inset 0 0 24px rgb(var(--gacha-rgb) / 0.6);
+  animation: gacha-shockwave 0.75s ease-out both;
+}
+.gacha-beam {
+  background: linear-gradient(to top, rgb(var(--gacha-rgb) / 0.9), rgb(var(--gacha-rgb) / 0.35) 45%, transparent);
+  clip-path: polygon(38% 100%, 62% 100%, 100% 0, 0 0);
+  filter: blur(8px);
+  mix-blend-mode: screen;
+  transform-origin: bottom;
+  animation: gacha-beam 0.7s ease-out both, gacha-beam-pulse 1.6s ease-in-out 0.7s infinite;
+}
+.gacha-rays {
+  background: repeating-conic-gradient(from var(--fx-angle), rgb(var(--gacha-rgb) / 0.4) 0deg 7deg, transparent 7deg 20deg);
+  -webkit-mask: radial-gradient(circle, #000 10%, transparent 65%);
+  mask: radial-gradient(circle, #000 10%, transparent 65%);
+  animation: fx-rotate 9s linear infinite, gacha-rays-in 0.8s ease-out both;
 }
 .gacha-spark {
-  animation: gacha-spark 0.8s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  animation: gacha-spark 1s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+.gacha-twinkle {
+  animation: gacha-twinkle 1.6s ease-in-out infinite both;
 }
 .gacha-rise {
-  animation: gacha-rise 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) both, gacha-bob 2.8s ease-in-out 0.6s infinite;
+  animation: gacha-rise 0.7s cubic-bezier(0.3, 1.4, 0.5, 1) both, gacha-bob 2.8s ease-in-out 0.7s infinite;
 }
 
+/* The walking pet (pet-walker.tsx) and the gacha opening (gacha-*) are exempt: equipping a pet and opening a box are
+   the player asking for the motion. */
 @media (prefers-reduced-motion: reduce) {
-  [class*="fx-"],
-  [class*="fx-"]::before,
-  [class*="fx-"]::after,
-  [class*="gacha-"],
-  .pet-sprite {
+  [class*="fx-"]:not(.pet-walk),
+  [class*="fx-"]:not(.pet-walk)::before,
+  [class*="fx-"]:not(.pet-walk)::after,
+  .pet-sprite:not(.pet-walk) {
     animation: none !important;
   }
 }
