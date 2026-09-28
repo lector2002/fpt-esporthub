@@ -11,6 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { DURATION_OPTIONS, MAX_SESSION_PRICE, formatVnd, priceFor, toLocalInputValue } from "../format";
 import { useWallet } from "@/features/credits/api";
+import { COIN_OUTLINE, SPEND_SURFACE } from "@/features/credits/components/spend-button";
+import { creditsForVnd } from "@/features/credits/pricing";
+import { cn } from "@/lib/utils";
 import { useCoachingMessages } from "../messages";
 import type { ProposalInput } from "../types";
 
@@ -204,16 +207,16 @@ function HoldLine({ price }: { price: number }) {
   const wallet = useWallet().data;
   const pack = wallet?.packages[0];
   if (!wallet || !pack) return null;
-  const hold = Math.ceil(price / (pack.amountVnd / pack.credits));
+  const hold = creditsForVnd(price, pack);
   const short = wallet.balance < hold;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm" data-testid="coaching-hold">
+    <div className={cn("flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm", SPEND_SURFACE)} data-testid="coaching-hold">
       <span className="flex items-center gap-1.5">
         <Coins className="size-4 text-coin" aria-hidden />
         {t("holdLine", { hold, balance: wallet.balance })}
       </span>
       {short && (
-        <Button asChild size="sm" variant="outline">
+        <Button asChild size="sm" variant="outline" className={COIN_OUTLINE}>
           <Link href="/wallet">{t("topUpNeed", { count: hold - wallet.balance })}</Link>
         </Button>
       )}

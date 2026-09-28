@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../features/cosmetics/fx.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -9,6 +10,7 @@
     --font-sans: "Archivo", "Archivo Fallback", ui-sans-serif, system-ui, sans-serif;
     --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
     --color-coin: var(--coin);
+    --color-coin-foreground: var(--coin-foreground);
     --color-lol: var(--lol);
     --color-valorant: var(--valorant);
     --color-success: var(--success);
@@ -89,6 +91,7 @@
     --sidebar-border: #26282b;
     --sidebar-ring: #c8f135;
     --coin: #f5c84c;
+    --coin-foreground: #1c1604;
     --lol: oklch(0.8 0.12 85);
     --valorant: oklch(0.68 0.21 22);
     --success: #4ade80;

@@ -26,6 +26,11 @@ export class CosmeticsController {
     return this.cosmetics.getMine(req.user.id);
   }
 
+  @Post("gacha/pull")
+  pull(@Request() req: AuthedRequest) {
+    return this.cosmetics.pull(req.user.id);
+  }
+
   @Post(":itemId/buy")
   buy(@Request() req: AuthedRequest, @Param("itemId") itemId: string) {
     return this.cosmetics.buy(req.user.id, itemId);

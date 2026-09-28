@@ -16,7 +16,7 @@ export function gameSlug(game: GameEnum): GameSlug {
   return game === "VALORANT" ? "valorant" : "league_of_legends";
 }
 
-export type CosmeticKind = "frame" | "banner" | "nameColor" | "title";
+export type CosmeticKind = "frame" | "banner" | "nameColor" | "title" | "card" | "pet";
 
 /** Equipped profile cosmetics (catalog ids), null = none. */
 export interface CosmeticsView {
@@ -24,6 +24,8 @@ export interface CosmeticsView {
   banner: string | null;
   nameColor: string | null;
   title: string | null;
+  card: string | null;
+  pet: string | null;
 }
 
 export interface SessionUser {

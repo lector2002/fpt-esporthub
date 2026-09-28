@@ -35,10 +35,11 @@ test("a player uploads an avatar and an achievement that others can see", async 
   await signIn(page, player, LOL);
   await page.goto("/profile/me");
 
-  await page.locator("#overview").getByTestId("picture-input").setInputFiles(PNG);
+  await page.getByTestId("picture-input").setInputFiles(PNG);
   await expect(toast(page, "Picture updated")).toBeVisible();
   await expect(page.locator("header").getByRole("button", { name: "Account" }).locator("img")).toHaveAttribute("src", /\/api\/v1\/media\/files\/[0-9a-f-]+\.webp$/);
 
+  await page.getByRole("tab", { name: "Teams & achievements" }).click();
   const gallery = page.locator("#achievements");
   await gallery.getByRole("button", { name: "Add achievement" }).click();
   const dialog = page.getByRole("dialog", { name: "Add achievement" });
@@ -72,10 +73,9 @@ test("a player and a captain upload card covers that show on the profile and the
   await signIn(page, player, LOL);
   await page.goto("/profile/me");
 
-  const overview = page.locator("#overview");
-  await overview.getByTestId("cover-input").setInputFiles(PNG);
+  await page.getByTestId("cover-input").setInputFiles(PNG);
   await expect(toast(page, "Picture updated")).toBeVisible();
-  await expect(overview.getByRole("button", { name: "Change cover" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Change cover" })).toBeVisible();
   await page.goto(`/players/${player.id}`);
   await expect(page.locator('img[src*="/api/v1/media/files/"]').first()).toBeVisible();
 

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDateTime } from "@/features/coaching/format";
 import { usePromotionError } from "@/features/credits/components/promotions";
-import { SpendButton } from "@/features/credits/components/spend-button";
+import { SPEND_SURFACE, SpendButton } from "@/features/credits/components/spend-button";
 import { cn } from "@/lib/utils";
 import { useBuyPremium, usePremium } from "../api";
 import { useGuidesMessages } from "../messages";
@@ -28,7 +28,6 @@ export function PremiumCard({ id, compact = false, className }: { id?: string; c
       icon={Crown}
       confirmTitle={t("premiumConfirmTitle", { days: price.days })}
       pending={buy.isPending}
-      variant={compact || until ? "outline" : "default"}
       size={compact ? "sm" : "default"}
       // mutateAsync: the card unmounts once the guide refetches as premium, which would drop mutate()'s onSuccess.
       onConfirm={() => buy.mutateAsync().then(() => toast.success(t("premiumBought")), onError)}
@@ -47,9 +46,9 @@ export function PremiumCard({ id, compact = false, className }: { id?: string; c
   }
 
   return (
-    <Card id={id} className={cn("scroll-mt-20 border-primary/40", className)} data-testid="premium-card">
+    <Card id={id} className={cn("scroll-mt-20", SPEND_SURFACE, className)} data-testid="premium-card">
       <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Crown className="size-6 shrink-0 text-primary" aria-hidden />
+        <Crown className="size-6 shrink-0 text-coin" aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="font-medium">{t("premiumTitle")}</p>
           <p className="text-sm text-muted-foreground">

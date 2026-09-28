@@ -20,6 +20,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { GameBadge } from "@/components/common/badges";
 import { UserAvatar } from "@/components/common/user-avatar";
+import { useWallet } from "@/features/credits/api";
+import { SpendButton } from "@/features/credits/components/spend-button";
+import { creditsForVnd } from "@/features/credits/pricing";
 import { cn } from "@/lib/utils";
 import { type RequestAction, useCoachingRequestAction, useCounterCoachingRequest } from "../api";
 import { formatDateTime, formatVnd } from "../format";
@@ -127,6 +130,9 @@ function SessionActions({ request }: { request: CoachingRequest }) {
   const counter = useCounterCoachingRequest();
   const name = request.counterpart.displayName;
   const pending = action.isPending || counter.isPending;
+  const wallet = useWallet().data;
+  const pack = wallet?.coachingInCredits ? wallet.packages[0] : undefined;
+  const holdPrice = pack && request.proposedPrice > 0 ? creditsForVnd(request.proposedPrice, pack) : undefined;
 
   function run(kind: RequestAction) {
     action.mutate(
@@ -146,10 +152,22 @@ function SessionActions({ request }: { request: CoachingRequest }) {
           <Hourglass className="size-3.5" /> {t("waiting", { name })}
         </span>
       )}
-      {request.canAgree && (
-        <Button size="sm" disabled={pending} onClick={() => run("agree")}>
-          <Check /> {t("agree")}
-        </Button>
+      {request.canAgree && request.viewerRole === "player" && holdPrice !== undefined ? (
+        <SpendButton
+          price={holdPrice}
+          label={t("agree")}
+          icon={Check}
+          confirmTitle={t("agreeHoldTitle", { name })}
+          pending={pending}
+          size="sm"
+          onConfirm={() => run("agree")}
+        />
+      ) : (
+        request.canAgree && (
+          <Button size="sm" disabled={pending} onClick={() => run("agree")}>
+            <Check /> {t("agree")}
+          </Button>
+        )
       )}
       {request.canCounter && (
         <Button size="sm" variant="outline" disabled={pending} onClick={() => setCounterOpen(true)}>

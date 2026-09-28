@@ -130,7 +130,7 @@ function SpendCard({ wallet }: { wallet: Wallet }) {
     { icon: Crown, label: t("useGuides"), price: premium && t("credits", { count: premium.credits }), href: "/guides" },
     { icon: Rocket, label: t("useBoost", { hours: wallet.promotions.boost.hours }), price: t("credits", { count: wallet.promotions.boost.credits }), href: "/dashboard" },
     { icon: Megaphone, label: t("useFeature", { hours: wallet.promotions.feature.hours }), price: t("credits", { count: wallet.promotions.feature.credits }), href: "/teams" },
-    { icon: Palette, label: t("useCosmetics"), price: cheapestCosmetic !== undefined && t("fromCredits", { count: cheapestCosmetic }), href: "/profile/me#cosmetics" },
+    { icon: Palette, label: t("useCosmetics"), price: cheapestCosmetic !== undefined && t("fromCredits", { count: cheapestCosmetic }), href: "/shop" },
   ];
 
   return (

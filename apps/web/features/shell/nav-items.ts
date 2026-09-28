@@ -1,4 +1,4 @@
-import { BookOpen, Crosshair, GraduationCap, LayoutDashboard, MessagesSquare, ShieldCheck, Trophy, Users } from "lucide-react";
+import { BookOpen, Crosshair, GraduationCap, LayoutDashboard, MessagesSquare, ShieldCheck, Store, Trophy, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ShellMessageKey } from "./messages";
 
@@ -24,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   // Online events and offline cafe cups share one hub; cup detail pages stay under /tournaments.
   { href: "/events", icon: Trophy, labelKey: "events", tab: true, also: ["/tournaments"] },
   { href: "/coaches", icon: GraduationCap, labelKey: "coaching", tab: false },
+  { href: "/shop", icon: Store, labelKey: "shop", tab: false },
   { href: "/guides", icon: BookOpen, labelKey: "guides", tab: false },
   { href: "/admin", icon: ShieldCheck, labelKey: "admin", tab: false, adminOnly: true },
 ];

@@ -14,7 +14,7 @@ import { playerArtUrl, SplashBanner } from "@/components/common/champion-splash"
 import { EmptyState, QueryState } from "@/components/common/query-state";
 import { RankEmblem } from "@/components/common/rank-emblem";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { CosmeticBanner, CosmeticFrame, CosmeticTitle, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
+import { CosmeticBanner, CosmeticFrame, CosmeticTitle, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
 import { useWallet } from "@/features/credits/api";
 import { AchievementsCard } from "@/features/media/components/achievement-gallery";
 import { mediaUrl } from "@/lib/media";
@@ -84,11 +84,11 @@ function CoachBanner({ coach }: { coach: CoachSummary }) {
 function CoachHeader({ coach }: { coach: CoachSummary }) {
   const { t } = useCoachingMessages();
   return (
-    <Card className="overflow-hidden pt-0">
+    <Card className={cn("overflow-hidden pt-0", cardLookClass(coach.cosmetics.card))}>
       <CoachBanner coach={coach} />
       <CardContent className="relative -mt-12 flex flex-col gap-5">
         <div className="flex items-end gap-4">
-          <CosmeticFrame frame={coach.cosmetics.frame}>
+          <CosmeticFrame frame={coach.cosmetics.frame} pet={coach.cosmetics.pet}>
             <UserAvatar name={coach.displayName} imageKey={coach.avatarKey} className="size-20 text-2xl ring-4 ring-card" />
           </CosmeticFrame>
           <div className="flex min-w-0 flex-col gap-1 pb-1">

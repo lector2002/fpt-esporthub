@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Inbox, LogOut, MessagesSquare, Pencil, Trash2, Volume2 } from "lucide-react";
+import { Inbox, LogOut, Megaphone, MessagesSquare, Pencil, Trash2, Volume2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { FeatureTeamPanel } from "@/features/credits/components/promotions";
+import { FEATURE_PANEL_ID, FeatureTeamPanel } from "@/features/credits/components/promotions";
+import { COIN_OUTLINE } from "@/features/credits/components/spend-button";
+import { useCreditsMessages } from "@/features/credits/messages";
 import { useMatchRequests } from "@/features/requests/api";
+import { cn } from "@/lib/utils";
 import { roomHref } from "@/features/voice/components/call-bar";
 import { useVoiceState } from "@/features/voice/store";
 import { useDeleteTeam, useLeaveTeam, useUpdateTeam } from "../api";
@@ -27,7 +30,20 @@ export function TeamHeaderActions({ team }: { team: TeamDetail }) {
     <>
       <TeamRoomButton team={team} />
       {team.viewerMembership === "member" && <LeaveTeamButton team={team} />}
+      {team.viewerMembership === "captain" && <FeatureShortcut />}
     </>
+  );
+}
+
+/** Phones only: captain tools sit below the roster there, so jump straight to the paid feature panel. */
+function FeatureShortcut() {
+  const { t } = useCreditsMessages();
+  return (
+    <Button asChild variant="outline" className={cn(COIN_OUTLINE, "font-semibold lg:hidden")}>
+      <a href={`#${FEATURE_PANEL_ID}`}>
+        <Megaphone /> {t("feature")}
+      </a>
+    </Button>
   );
 }
 

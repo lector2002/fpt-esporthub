@@ -56,8 +56,8 @@ export function DashboardScreen() {
                 {view.readiness && <TodoCard readiness={view.readiness} />}
               </div>
               <div className="flex flex-col gap-6">
-                <DailyMatchesCard matches={view.dailyMatches} aram={view.playMode === "aram"} />
                 <BoostProfileCard game={game} boostedUntil={boostedUntil} />
+                <DailyMatchesCard matches={view.dailyMatches} aram={view.playMode === "aram"} />
               </div>
             </div>
           </div>

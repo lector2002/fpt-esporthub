@@ -10,7 +10,7 @@ import { CARD_HOVER, CardLink } from "@/components/common/card-link";
 import { playerArtUrl, SplashBanner } from "@/components/common/champion-splash";
 import { RankEmblem } from "@/components/common/rank-emblem";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { CosmeticBanner, CosmeticFrame, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
+import { CosmeticBanner, CosmeticFrame, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
 import { formatRank } from "@/lib/contracts";
 import { mediaUrl } from "@/lib/media";
 import { cn } from "@/lib/utils";
@@ -30,7 +30,7 @@ export function CoachCard({ coach }: { coach: CoachSummary }) {
   const { t } = useCoachingMessages();
   const extraSlots = coach.availability.length - AVAILABILITY_PREVIEW;
   return (
-    <Card size="sm" className={cn("h-full pt-0", CARD_HOVER)}>
+    <Card size="sm" className={cn("h-full pt-0", CARD_HOVER, cardLookClass(coach.cosmetics.card))}>
       <CardLink href={`/coaches/${coach.id}`} />
       {coach.coverKey ? (
         <SplashBanner src={mediaUrl(coach.coverKey)} className="h-16" />
@@ -41,7 +41,7 @@ export function CoachCard({ coach }: { coach: CoachSummary }) {
       )}
       <CardContent className="relative -mt-9 flex flex-1 flex-col gap-3">
         <div className="flex items-start gap-3">
-          <CosmeticFrame frame={coach.cosmetics.frame}>
+          <CosmeticFrame frame={coach.cosmetics.frame} pet={coach.cosmetics.pet}>
             <UserAvatar name={coach.displayName} imageKey={coach.avatarKey} className="size-12 ring-4 ring-card" />
           </CosmeticFrame>
           <div className="min-w-0 flex-1 pt-7">

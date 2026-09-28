@@ -1,0 +1,223 @@
+/* Cosmetic art for rare and epic items. looks.ts maps catalog ids to these classes. */
+
+@property --fx-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes fx-rotate {
+  to { --fx-angle: 360deg; }
+}
+@keyframes fx-pan {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+@keyframes fx-sweep {
+  0%, 55% { transform: translateX(-120%) skewX(-20deg); }
+  100% { transform: translateX(260%) skewX(-20deg); }
+}
+@keyframes fx-twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+@keyframes fx-glow {
+  0%, 100% { box-shadow: 0 0 4px 0 var(--fx-glow); }
+  50% { box-shadow: 0 0 14px 2px var(--fx-glow); }
+}
+@keyframes fx-halo {
+  0%, 100% { filter: drop-shadow(0 0 2px var(--fx-glow)); }
+  50% { filter: drop-shadow(0 0 9px var(--fx-glow)); }
+}
+@keyframes fx-text-shine {
+  to { background-position: -200% center; }
+}
+
+/* A light band that crosses the element every few seconds. Needs `relative overflow-hidden` on the element. */
+.fx-sheen::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.45), transparent);
+  animation: fx-sweep 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Avatar frames (the ring div in CosmeticFrame). */
+.fx-frame-gold {
+  --fx-glow: rgb(245 158 11 / 0.55);
+  background: linear-gradient(135deg, #fde68a, #f59e0b, #b45309, #fde68a, #f59e0b);
+  background-size: 300% 300%;
+  animation: fx-pan 3s ease-in-out infinite alternate, fx-glow 3s ease-in-out infinite;
+}
+.fx-frame-ember {
+  --fx-glow: rgb(239 68 68 / 0.6);
+  background: linear-gradient(135deg, #fdba74, #ef4444, #be123c, #f97316, #fdba74);
+  background-size: 300% 300%;
+  animation: fx-pan 1.8s ease-in-out infinite alternate, fx-glow 1.2s ease-in-out infinite;
+}
+.fx-frame-neon {
+  --fx-glow: rgb(217 70 239 / 0.65);
+  background: conic-gradient(from var(--fx-angle), #f0abfc, #d946ef, #8b5cf6, #22d3ee, #a3e635, #f0abfc);
+  animation: fx-rotate 2.4s linear infinite, fx-glow 2s ease-in-out infinite;
+}
+
+/* Banners. Position comes from Tailwind in looks.ts so a caller's `absolute` still wins. */
+.fx-banner-ember {
+  background: linear-gradient(90deg, #f59e0b, #dc2626, #1c1917, #dc2626, #f59e0b);
+  background-size: 300% 100%;
+  animation: fx-pan 6s ease-in-out infinite alternate;
+}
+.fx-banner-night {
+  background: linear-gradient(90deg, #0f172a, #312e81, #5b21b6);
+}
+.fx-banner-night::before,
+.fx-banner-night::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: fx-twinkle 3s ease-in-out infinite;
+}
+.fx-banner-night::before {
+  background-image:
+    radial-gradient(1.5px 1.5px at 8% 30%, #fff, transparent),
+    radial-gradient(1px 1px at 22% 72%, #fff, transparent),
+    radial-gradient(2px 2px at 41% 22%, #e0e7ff, transparent),
+    radial-gradient(1px 1px at 58% 64%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 77% 35%, #fff, transparent),
+    radial-gradient(1px 1px at 92% 78%, #e0e7ff, transparent);
+}
+.fx-banner-night::after {
+  animation-delay: -1.5s;
+  background-image:
+    radial-gradient(1px 1px at 14% 58%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 33% 40%, #c7d2fe, transparent),
+    radial-gradient(1px 1px at 49% 84%, #fff, transparent),
+    radial-gradient(2px 2px at 66% 18%, #fff, transparent),
+    radial-gradient(1px 1px at 84% 55%, #c7d2fe, transparent),
+    radial-gradient(1.5px 1.5px at 97% 26%, #fff, transparent);
+}
+.fx-banner-aurora {
+  background: linear-gradient(115deg, #34d399, #14b8a6, #6366f1, #a855f7, #ec4899, #f59e0b, #34d399);
+  background-size: 400% 100%;
+  animation: fx-pan 9s ease-in-out infinite alternate;
+}
+
+/* Name colors. */
+.fx-name-gold {
+  background: linear-gradient(90deg, #b45309, #f59e0b, #fde68a, #f59e0b, #b45309);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 6px rgb(245 158 11 / 0.35));
+  animation: fx-text-shine 3s linear infinite;
+}
+
+/* Epic prestige fill: epic titles and the epic rarity badge. */
+.fx-prestige {
+  color: #fff;
+  background: linear-gradient(90deg, #7c3aed, #d946ef, #f59e0b, #d946ef, #7c3aed);
+  background-size: 300% 100%;
+  box-shadow: 0 0 12px rgb(217 70 239 / 0.45);
+  animation: fx-pan 4s ease-in-out infinite alternate;
+}
+
+/* Card decorations: a gradient border drawn under a card-colored fill, plus a glow that leaves the focus ring alone. */
+.fx-card {
+  border: 2px solid transparent;
+}
+.fx-card-gold {
+  --fx-glow: rgb(245 158 11 / 0.35);
+  background:
+    linear-gradient(to bottom, rgb(245 158 11 / 0.14), transparent 45%) padding-box,
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(135deg, #fde68a, #f59e0b, #92400e, #fde68a, #f59e0b) border-box;
+  background-size: 100% 100%, 100% 100%, 300% 300%;
+  animation: fx-pan 3s ease-in-out infinite alternate, fx-halo 3s ease-in-out infinite;
+}
+.fx-card-ember {
+  --fx-glow: rgb(239 68 68 / 0.4);
+  background:
+    linear-gradient(to top, rgb(220 38 38 / 0.16), transparent 45%) padding-box,
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(135deg, #fdba74, #ef4444, #7f1d1d, #f97316, #fdba74) border-box;
+  background-size: 100% 100%, 100% 100%, 300% 300%;
+  animation: fx-pan 1.8s ease-in-out infinite alternate, fx-halo 1.4s ease-in-out infinite;
+}
+.fx-card-neon {
+  --fx-glow: rgb(217 70 239 / 0.45);
+  background:
+    linear-gradient(135deg, rgb(217 70 239 / 0.14), transparent 40%, transparent 60%, rgb(34 211 238 / 0.12)) padding-box,
+    linear-gradient(var(--card), var(--card)) padding-box,
+    conic-gradient(from var(--fx-angle), #f0abfc, #d946ef, #8b5cf6, #22d3ee, #a3e635, #f0abfc) border-box;
+  animation: fx-rotate 3s linear infinite, fx-halo 2s ease-in-out infinite;
+}
+
+/* Shop tile of an epic item: slowly turning prestige border. */
+.fx-edge-epic {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    conic-gradient(from var(--fx-angle), #d946ef, #f59e0b, #8b5cf6, #22d3ee, #d946ef) border-box;
+  animation: fx-rotate 5s linear infinite;
+}
+
+/* Gacha reveal: light rays turning behind the item. Color from --fx-ray. */
+.fx-rays {
+  background: repeating-conic-gradient(from var(--fx-angle), var(--fx-ray) 0deg 8deg, transparent 8deg 24deg);
+  -webkit-mask: radial-gradient(circle, #000 15%, transparent 68%);
+  mask: radial-gradient(circle, #000 15%, transparent 68%);
+  animation: fx-rotate 14s linear infinite;
+}
+
+/* Pets: a 6-frame idle strip (public/pets), stepped through left to right. Height comes from the utility classes. */
+.pet-sprite {
+  aspect-ratio: 89 / 96;
+  background-repeat: no-repeat;
+  background-size: 600% 100%;
+  animation: pet-idle 1.2s steps(6, jump-none) infinite;
+  pointer-events: none;
+}
+@keyframes pet-idle {
+  from { background-position-x: 0%; }
+  to { background-position-x: 100%; }
+}
+.fx-pet-halo {
+  animation: pet-idle 1.2s steps(6, jump-none) infinite, fx-halo 2.4s ease-in-out infinite;
+}
+/* Epic pet: halo plus sparkles drifting around it. Needs a positioned element. */
+.fx-pet-sparkle {
+  animation: pet-idle 1.2s steps(6, jump-none) infinite, fx-halo 1.8s ease-in-out infinite;
+}
+.fx-pet-sparkle::before,
+.fx-pet-sparkle::after {
+  content: "";
+  position: absolute;
+  inset: -15%;
+  pointer-events: none;
+  animation: fx-twinkle 1.6s ease-in-out infinite;
+  background-image:
+    radial-gradient(2px 2px at 10% 20%, #67e8f9, transparent),
+    radial-gradient(1.5px 1.5px at 88% 12%, #f0abfc, transparent),
+    radial-gradient(2px 2px at 92% 70%, #67e8f9, transparent);
+}
+.fx-pet-sparkle::after {
+  animation-delay: -0.8s;
+  background-image:
+    radial-gradient(1.5px 1.5px at 4% 64%, #f0abfc, transparent),
+    radial-gradient(2px 2px at 50% 2%, #fde68a, transparent),
+    radial-gradient(1.5px 1.5px at 76% 96%, #f0abfc, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="fx-"],
+  [class*="fx-"]::before,
+  [class*="fx-"]::after,
+  .pet-sprite {
+    animation: none !important;
+  }
+}

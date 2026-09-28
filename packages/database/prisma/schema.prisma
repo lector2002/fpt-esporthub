@@ -91,6 +91,10 @@ model User {
   bannerId        String?
   nameColorId     String?
   titleId         String?
+  /// Card decoration: border and glow on the player's cards.
+  cardId          String?
+  /// Animated pet shown next to the avatar.
+  petId           String?
   /// Build guides premium pass end; null or past = free tier only.
   premiumUntil    DateTime?
   createdAt       DateTime        @default(now())

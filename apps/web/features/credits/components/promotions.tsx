@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/features/coaching/format";
 import { ApiError } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import type { GameSlug } from "@/lib/contracts";
 import { useBoostProfile, useFeatureTeam, useWallet } from "../api";
 import { useCreditsMessages } from "../messages";
-import { SpendButton } from "./spend-button";
+import { COIN_OUTLINE, SPEND_SURFACE, SpendButton } from "./spend-button";
 
 function isActive(until: string | null | undefined) {
   return Boolean(until && new Date(until) > new Date());
@@ -39,10 +40,10 @@ export function BoostProfileCard({ game, boostedUntil }: { game: GameSlug; boost
   const active = isActive(boostedUntil);
 
   return (
-    <Card size="sm" data-testid="boost-card">
+    <Card size="sm" className={SPEND_SURFACE} data-testid="boost-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Rocket className="size-4 text-muted-foreground" aria-hidden /> {t("boostTitle")}
+          <Rocket className="size-4 text-coin" aria-hidden /> {t("boostTitle")}
         </CardTitle>
         {price && <CardDescription>{t("boostHint", { hours: price.hours, price: price.credits })}</CardDescription>}
       </CardHeader>
@@ -54,8 +55,6 @@ export function BoostProfileCard({ game, boostedUntil }: { game: GameSlug; boost
           icon={Rocket}
           confirmTitle={price ? t("boostConfirmTitle", { hours: price.hours }) : ""}
           pending={boost.isPending}
-          variant="outline"
-          size="sm"
           className="self-start"
           onConfirm={() => boost.mutate(game, { onSuccess: () => toast.success(t("boostDone")), onError })}
         />
@@ -63,6 +62,9 @@ export function BoostProfileCard({ game, boostedUntil }: { game: GameSlug; boost
     </Card>
   );
 }
+
+/** Anchor for the captain's shortcut in the team header. */
+export const FEATURE_PANEL_ID = "feature-team";
 
 export function FeatureTeamPanel({ teamId, featuredUntil, recruitmentOpen }: { teamId: string; featuredUntil: string | null; recruitmentOpen: boolean }) {
   const { t, language } = useCreditsMessages();
@@ -73,9 +75,9 @@ export function FeatureTeamPanel({ teamId, featuredUntil, recruitmentOpen }: { t
   const active = isActive(featuredUntil);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div id={FEATURE_PANEL_ID} className={cn("flex scroll-mt-20 flex-col gap-2 rounded-lg border p-3", SPEND_SURFACE)}>
       <div className="flex items-center gap-2 text-sm font-medium">
-        <Megaphone className="size-4 text-primary" aria-hidden />
+        <Megaphone className="size-4 text-coin" aria-hidden />
         {t("featureTitle")}
       </div>
       {price && <p className="text-xs text-muted-foreground">{t("featureHint", { hours: price.hours, price: price.credits })}</p>}
@@ -88,13 +90,12 @@ export function FeatureTeamPanel({ teamId, featuredUntil, recruitmentOpen }: { t
           confirmTitle={price ? t("featureConfirmTitle", { hours: price.hours }) : ""}
           pending={feature.isPending}
           disabled={!recruitmentOpen}
-          variant="outline"
           size="sm"
           className="flex-1"
           onConfirm={() => feature.mutate(undefined, { onSuccess: () => toast.success(t("featureDone")), onError })}
         />
         {wallet && (
-          <Button asChild size="sm" variant="ghost">
+          <Button asChild size="sm" variant="outline" className={COIN_OUTLINE}>
             <Link href="/wallet">{t("credits", { count: wallet.balance })}</Link>
           </Button>
         )}

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { avatarPaths } from "@/features/media/api";
 import { AchievementsCard } from "@/features/media/components/achievement-gallery";
-import { CosmeticBanner, CosmeticFrame, CosmeticTitle, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
+import { CosmeticBanner, CosmeticFrame, CosmeticTitle, cardLookClass, nameColorClass } from "@/features/cosmetics/components/cosmetic-parts";
 import { CoverEditor, PictureEditor } from "@/features/media/components/picture-editor";
 import { SendRequestButton } from "@/features/requests/components/send-request-button";
 import { PlaystyleSummary } from "@/features/questionnaire/components/playstyle-summary";
@@ -127,7 +127,7 @@ function PublicProfile({ data, viewerGame }: { data: PublicProfileResponse; view
 
   return (
     <div className="flex flex-col gap-6">
-      <Card className="overflow-hidden pt-0">
+      <Card className={cn("overflow-hidden pt-0", cardLookClass(cosmetics.card))}>
         {banner ? (
           <CosmeticBanner banner={banner} className="h-32 sm:h-40" />
         ) : (
@@ -135,7 +135,7 @@ function PublicProfile({ data, viewerGame }: { data: PublicProfileResponse; view
         )}
         <CardContent className="relative -mt-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex min-w-0 items-end gap-4">
-            <CosmeticFrame frame={cosmetics.frame}>
+            <CosmeticFrame frame={cosmetics.frame} pet={cosmetics.pet}>
               <PictureEditor
                 name={data.user.displayName}
                 imageKey={data.user.avatarKey}

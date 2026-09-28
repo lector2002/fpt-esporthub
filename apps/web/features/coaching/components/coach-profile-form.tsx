@@ -24,7 +24,7 @@ import { CoachCard } from "./coach-card";
 const ITEM_MAX = 40;
 const BIO_MIN = 20;
 const BIO_MAX = 1000;
-const NO_COSMETICS: CosmeticsView = { frame: null, banner: null, nameColor: null, title: null };
+const NO_COSMETICS: CosmeticsView = { frame: null, banner: null, nameColor: null, title: null, card: null, pet: null };
 
 type FormState = Omit<CoachProfileInput, "hourlyRate"> & { hourlyRate: string };
 type Errors = Partial<Record<keyof FormState, string>>;

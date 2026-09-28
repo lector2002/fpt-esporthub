@@ -41,7 +41,7 @@ test("player searches a Riot ID, links it from the preview, then unlinks it", as
   const player = await createPlayer("E2E Riot", ["league_of_legends"]);
   await stubRiot(page);
   await signIn(page, player, "league_of_legends");
-  await page.goto("/profile/me");
+  await page.goto("/profile/me?tab=riot");
 
   const riot = page.locator("#riot");
   await riot.getByLabel("Riot ID").fill("no tag");

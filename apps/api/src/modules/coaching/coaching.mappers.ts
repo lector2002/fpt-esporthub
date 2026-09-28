@@ -41,6 +41,8 @@ interface CoachRecord {
     bannerId: string | null;
     nameColorId: string | null;
     titleId: string | null;
+    cardId: string | null;
+    petId: string | null;
     profiles: { game: GameId; rankTier: string; rankLevel: number | null; role: string; verificationStatus: string; mains: string[]; recentChampion: string | null }[];
   };
   feedbacks: { rating: number }[];
