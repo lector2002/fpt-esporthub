@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { issueVerificationToken } from "./db";
 import { PASSWORD, SEEDED_USER, setEnglish, uniqueEmail, uniqueTag } from "./helpers";
 
 test.beforeEach(async ({ context }) => {
@@ -8,14 +9,26 @@ test.beforeEach(async ({ context }) => {
 test("new user registers, completes Valorant onboarding and lands on the dashboard", async ({ page }) => {
   test.slow();
   const displayName = `E2E Reg ${uniqueTag()}`;
+  const email = uniqueEmail();
 
   await page.goto("/register");
   await page.getByLabel("Display name").fill(displayName);
-  await page.getByLabel("Email").fill(uniqueEmail());
+  await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await page.getByLabel("Confirm password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByText(`We sent a confirmation link to ${email}`)).toBeVisible();
 
+  // Signing in before confirming is refused, with a way to get the email again.
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Your email isn't confirmed yet." })).toBeVisible();
+  await page.getByRole("button", { name: "Resend confirmation email" }).click();
+  await expect(page.getByText("Sent again.")).toBeVisible();
+
+  await page.goto(`/verify-email?token=${await issueVerificationToken(email)}`);
   await expect(page).toHaveURL(/\/onboarding/);
   const next = page.getByRole("button", { name: "Continue" });
 
@@ -42,6 +55,11 @@ test("new user registers, completes Valorant onboarding and lands on the dashboa
 
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("heading", { level: 1, name: displayName })).toBeVisible();
+});
+
+test("an invalid confirmation link asks the user to sign in for a new one", async ({ page }) => {
+  await page.goto(`/verify-email?token=${"0".repeat(64)}`);
+  await expect(page.getByRole("alert").filter({ hasText: "This link is invalid or expired." })).toBeVisible();
 });
 
 test("login with a wrong password shows an error and stays on the login page", async ({ page }) => {

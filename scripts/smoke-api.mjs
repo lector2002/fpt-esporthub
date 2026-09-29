@@ -1,11 +1,22 @@
 // End-to-end API smoke test against a running API with seeded data.
 // Creates two throwaway users per run (smoke+<ts>-a/b@example.com) and exercises the core loop plus safety rules.
+// Sign-up needs the emailed link, so new users are confirmed straight in the database (DATABASE_URL or the root .env).
+import { existsSync, readFileSync } from "node:fs";
+import { PrismaClient } from "@fpt-esporthub/database";
+
 const apiUrl = process.env.API_URL ?? "http://localhost:4000/api/v1";
 const adminEmail = process.env.SMOKE_ADMIN_EMAIL ?? "admin@fpt-esporthub.local";
 const password = process.env.SMOKE_PASSWORD ?? "Password123!";
 const LOL = "league_of_legends";
 
 let failures = 0;
+
+function databaseUrl() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  const line = existsSync(".env") ? readFileSync(".env", "utf8").split(/\r?\n/).find((row) => row.startsWith("DATABASE_URL=")) : undefined;
+  return line?.slice("DATABASE_URL=".length).replace(/^["']|["']$/g, "");
+}
+const prisma = new PrismaClient({ datasourceUrl: databaseUrl() });
 
 async function call(method, path, { token, body } = {}) {
   const response = await fetch(`${apiUrl}${path}`, {
@@ -46,9 +57,13 @@ async function expectStatus(name, expected, method, path, options) {
 
 async function createPlayer(tag) {
   const email = `smoke+${Date.now()}-${tag}@example.com`;
-  const { accessToken, user } = await expectStatus(`register ${tag}`, 201, "POST", "/auth/register", {
+  const registered = await expectStatus(`register ${tag}`, 201, "POST", "/auth/register", {
     body: { email, password, displayName: `Smoke ${tag.toUpperCase()}` },
   });
+  check(`register ${tag} returns no session`, registered && !("accessToken" in registered));
+  await expectStatus(`login ${tag} refused before email confirmed`, 403, "POST", "/auth/login", { body: { email, password } });
+  await prisma.user.update({ where: { email }, data: { emailVerifiedAt: new Date() } });
+  const { accessToken, user } = await expectStatus(`login ${tag}`, 201, "POST", "/auth/login", { body: { email, password } });
   await expectStatus(`onboarding ${tag}`, 201, "POST", "/profiles/onboarding", {
     token: accessToken,
     body: {
@@ -66,6 +81,7 @@ async function createPlayer(tag) {
 
 await expectStatus("health", 200, "GET", "/health");
 await expectStatus("login rejects wrong password", 401, "POST", "/auth/login", { body: { email: adminEmail, password: "wrong-password" } });
+await expectStatus("verify-email rejects an unknown link", 400, "POST", "/auth/verify-email", { body: { token: "0".repeat(64) } });
 
 const a = await createPlayer("a");
 const b = await createPlayer("b");
@@ -468,4 +484,5 @@ await expectStatus("events list", 200, "GET", "/tournaments");
 await expectStatus("coaches list", 200, "GET", `/coaching/coaches?game=${LOL}`, { token: a.token });
 
 console.log(failures ? `\n${failures} check(s) failed` : "\nAll checks passed");
+await prisma.$disconnect();
 process.exit(failures ? 1 : 0);

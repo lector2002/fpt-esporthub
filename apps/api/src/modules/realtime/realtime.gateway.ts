@@ -203,15 +203,15 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return this.calls.roomSignal(userId, socket.id, payload);
   }
 
-  /** Same rule as the REST JwtStrategy: a valid token for an existing, non-banned user. */
+  /** Same rule as the REST JwtStrategy: a valid token for an existing, verified, non-banned user. */
   private async authenticate(socket: Socket): Promise<string | null> {
     const token: unknown = socket.handshake.auth?.token;
     if (typeof token !== "string" || !token) return null;
     try {
       const payload = this.jwt.verify<{ sub?: string }>(token);
       if (typeof payload.sub !== "string") return null;
-      const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, select: { status: true } });
-      return user && user.status !== "BANNED" ? payload.sub : null;
+      const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, select: { status: true, emailVerifiedAt: true } });
+      return user && user.status !== "BANNED" && user.emailVerifiedAt ? payload.sub : null;
     } catch {
       this.logger.debug("Rejected socket with invalid token");
       return null;

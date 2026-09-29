@@ -15,16 +15,24 @@ export class EmailService {
 
   /** Sends the reset link. Never throws and never logs the link outside development. */
   async sendPasswordReset(to: string, link: string) {
-    const message = buildResetMessage(to, link);
+    await this.deliver(buildResetMessage(to, link), "Password reset", link);
+  }
+
+  /** Sends the sign-up confirmation link. Same rules as the reset link. */
+  async sendEmailVerification(to: string, link: string) {
+    await this.deliver(buildVerificationMessage(to, link), "Email verification", link);
+  }
+
+  private async deliver(message: EmailMessage, kind: string, link: string) {
     if (this.isConfigured()) {
       await this.send(message);
       return;
     }
     if (process.env.NODE_ENV !== "production") {
-      this.logger.log(`Email not configured. Password reset link for ${to}: ${link}`);
+      this.logger.log(`Email not configured. ${kind} link for ${message.to}: ${link}`);
       return;
     }
-    this.logger.error("Email not configured (RESEND_API_KEY, EMAIL_FROM). Password reset email was not sent.");
+    this.logger.error(`Email not configured (RESEND_API_KEY, EMAIL_FROM). ${kind} email was not sent.`);
   }
 
   private isConfigured() {
@@ -65,5 +73,23 @@ function buildResetMessage(to: string, link: string): EmailMessage {
 <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản FPT EsportHub của bạn.</p>
 <p><a href="${link}">Đặt mật khẩu mới</a> (liên kết có hiệu lực 30 phút)</p>
 <p>Nếu bạn không yêu cầu, hãy bỏ qua email này. Mật khẩu hiện tại vẫn giữ nguyên.</p>`;
+  return { to, subject, text, html };
+}
+
+function buildVerificationMessage(to: string, link: string): EmailMessage {
+  const subject = "Xác nhận email FPT EsportHub";
+  const text = [
+    "Xin chào,",
+    "",
+    "Cảm ơn bạn đã đăng ký FPT EsportHub.",
+    "Mở liên kết sau để xác nhận email và bắt đầu tìm đồng đội (hiệu lực 24 giờ):",
+    link,
+    "",
+    "Nếu bạn không đăng ký, hãy bỏ qua email này.",
+  ].join("\n");
+  const html = `<p>Xin chào,</p>
+<p>Cảm ơn bạn đã đăng ký FPT EsportHub.</p>
+<p><a href="${link}">Xác nhận email</a> (liên kết có hiệu lực 24 giờ)</p>
+<p>Nếu bạn không đăng ký, hãy bỏ qua email này.</p>`;
   return { to, subject, text, html };
 }

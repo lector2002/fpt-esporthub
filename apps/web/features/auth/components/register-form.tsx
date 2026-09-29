@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useRegister } from "../api";
 import { useAuthMessages } from "../messages";
 import { checkConfirm, checkDisplayName, checkEmail, checkPassword, normalizeEmail } from "../validation";
+import { BackToLogin } from "./forgot-password-form";
 import { AuthCard, FormError, TextField, apiErrorText, issueText } from "./form-parts";
+import { ResendVerificationButton } from "./resend-verification";
 
 export function RegisterForm() {
   const { t } = useAuthMessages();
@@ -26,7 +29,7 @@ export function RegisterForm() {
     confirm: checkConfirm(password, confirm),
   };
   const shown = (issue: keyof typeof issues) => (submitted ? issueText(t, issues[issue]) : undefined);
-  const pending = register.isPending || register.isSuccess;
+  const pending = register.isPending;
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -34,6 +37,19 @@ export function RegisterForm() {
     if (Object.values(issues).some(Boolean)) return;
     register.mutate({ displayName: displayName.trim(), email: normalizeEmail(email), password });
   };
+
+  if (register.isSuccess) {
+    return (
+      <AuthCard title={t("registerSentTitle")}>
+        <div className="flex items-start gap-3">
+          <MailCheck className="mt-0.5 size-5 shrink-0 text-success" aria-hidden />
+          <p className="text-sm text-muted-foreground">{t("registerSentDescription", { email: register.data.email })}</p>
+        </div>
+        <ResendVerificationButton email={register.data.email} />
+        <BackToLogin label={t("backToLogin")} />
+      </AuthCard>
+    );
+  }
 
   return (
     <AuthCard title={t("registerTitle")} description={t("registerDescription")}>

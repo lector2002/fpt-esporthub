@@ -12,6 +12,7 @@ import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { ResendVerificationDto, VerifyEmailDto } from "./dto/verify-email.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 
 @Controller("auth")
@@ -37,6 +38,17 @@ export class AuthController {
   @Post("reset-password")
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Post("verify-email")
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post("resend-verification")
+  resendVerification(@Body() dto: ResendVerificationDto) {
+    return this.authService.resendVerification(dto);
   }
 
   @UseGuards(JwtAuthGuard)

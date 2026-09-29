@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api, setToken } from "@/lib/api-client";
 import { useSession } from "@/lib/session";
-import type { AuthResponse, LoginInput, MessageResponse, RegisterInput, ResetPasswordInput } from "./types";
+import type { AuthResponse, LoginInput, MessageResponse, RegisterInput, RegisterResponse, ResetPasswordInput } from "./types";
 
 const post = <T>(path: string, body: unknown) => api<T>(path, { method: "POST", body, auth: false });
 
@@ -33,11 +33,24 @@ export function useLogin(destination: string) {
   });
 }
 
+/** Creates the account and sends the confirmation email; the user signs in from the link. */
 export function useRegister() {
+  return useMutation({
+    mutationFn: (input: RegisterInput) => post<RegisterResponse>("/auth/register", input),
+  });
+}
+
+export function useVerifyEmail() {
   const signedIn = useSignedIn();
   return useMutation({
-    mutationFn: (input: RegisterInput) => post<AuthResponse>("/auth/register", input),
+    mutationFn: (token: string) => post<AuthResponse>("/auth/verify-email", { token }),
     onSuccess: (response) => signedIn(response, "/onboarding"),
+  });
+}
+
+export function useResendVerification() {
+  return useMutation({
+    mutationFn: (email: string) => post<MessageResponse>("/auth/resend-verification", { email }),
   });
 }
 

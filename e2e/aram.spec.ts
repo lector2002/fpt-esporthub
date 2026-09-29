@@ -1,18 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PASSWORD, apiCall, matchCardFor, setEnglish, signIn, toast, uniqueTag, type TestUser } from "./helpers";
+import { apiCall, matchCardFor, registerVerified, setEnglish, signIn, toast, uniqueTag, type TestUser } from "./helpers";
 
 const LOL = "league_of_legends";
-
-type AuthResponse = { accessToken: string; user: { id: string; email: string; displayName: string } };
 
 /** Fresh account for this spec (w9+ prefix keeps these test users identifiable). */
 async function registerW9(prefix: string): Promise<TestUser> {
   const email = `w9+${Date.now()}${Math.random().toString(36).slice(2, 6)}@example.com`;
-  const { accessToken, user } = await apiCall<AuthResponse>("/auth/register", {
-    method: "POST",
-    body: { email, password: PASSWORD, displayName: `${prefix} ${uniqueTag()}` },
-  });
-  return { id: user.id, email: user.email, displayName: user.displayName, token: accessToken };
+  return registerVerified(email, `${prefix} ${uniqueTag()}`);
 }
 
 /** ARAM-only LoL profile: no rank or role is sent, the API stores Unranked / Fill. */

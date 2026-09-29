@@ -10,7 +10,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { safeNextPath, useLogin } from "../api";
 import { useAuthMessages } from "../messages";
 import { checkEmail, normalizeEmail } from "../validation";
+import { ApiError } from "@/lib/api-client";
 import { AuthCard, FormError, TextField, apiErrorText, issueText } from "./form-parts";
+import { ResendVerificationButton } from "./resend-verification";
 
 export function LoginForm() {
   const { t } = useAuthMessages();
@@ -26,6 +28,7 @@ export function LoginForm() {
   const emailError = submitted ? issueText(t, checkEmail(email)) : undefined;
   const passwordError = submitted && !password ? t("errorRequired") : undefined;
   const pending = login.isPending || login.isSuccess;
+  const unverified = login.error instanceof ApiError && login.error.status === 403 && login.error.message === "Email not verified";
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -67,7 +70,8 @@ export function LoginForm() {
             </Link>
           }
         />
-        <FormError message={login.isError ? apiErrorText(t, login.error, { 401: t("errorInvalidCredentials") }) : undefined} />
+        <FormError message={unverified ? t("errorEmailNotVerified") : login.isError ? apiErrorText(t, login.error, { 401: t("errorInvalidCredentials") }) : undefined} />
+        {unverified && <ResendVerificationButton email={normalizeEmail(email)} />}
         <Button type="submit" size="lg" disabled={pending}>
           {pending && <Spinner />}
           {pending ? t("loginPending") : t("loginSubmit")}

@@ -1,4 +1,5 @@
 import type { BrowserContext, Page } from "@playwright/test";
+import { markEmailVerified } from "./db";
 
 export const API_URL = process.env.E2E_BASE_URL ? `${process.env.E2E_BASE_URL}/api/v1` : "http://localhost:4000/api/v1";
 export const PASSWORD = "Password123!";
@@ -41,13 +42,15 @@ export async function apiCall<T>(path: string, options: { method?: string; body?
 
 type AuthResponse = { accessToken: string; user: { id: string; email: string; displayName: string } };
 
+/** Signs up, confirms the email in the database (no inbox in tests) and signs in. */
+export async function registerVerified(email: string, displayName: string): Promise<TestUser> {
+  await apiCall("/auth/register", { method: "POST", body: { email, password: PASSWORD, displayName } });
+  await markEmailVerified(email);
+  return loginUser(email);
+}
+
 export async function registerUser(prefix = "E2E"): Promise<TestUser> {
-  const displayName = `${prefix} ${uniqueTag()}`;
-  const { accessToken, user } = await apiCall<AuthResponse>("/auth/register", {
-    method: "POST",
-    body: { email: uniqueEmail(), password: PASSWORD, displayName },
-  });
-  return { id: user.id, email: user.email, displayName: user.displayName, token: accessToken };
+  return registerVerified(uniqueEmail(), `${prefix} ${uniqueTag()}`);
 }
 
 export async function loginUser(email: string, password = PASSWORD): Promise<TestUser> {

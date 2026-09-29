@@ -7,7 +7,7 @@ async function upsertUser(id: string, email: string, displayName: string, role: 
   return prisma.user.upsert({
     where: { email },
     update: { displayName, role, passwordHash },
-    create: { id, email, displayName, role, passwordHash },
+    create: { id, email, displayName, role, passwordHash, emailVerifiedAt: new Date() },
   });
 }
 

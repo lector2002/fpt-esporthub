@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { io } from "socket.io-client";
-import { API_URL, PASSWORD, apiCall, onboard, setEnglish, signIn, toast, type TestUser } from "./helpers";
+import { API_URL, apiCall, onboard, registerVerified, setEnglish, signIn, toast, type TestUser } from "./helpers";
 
 // Chromium's fake mic (a beep) and auto-accepted permission prompt.
 test.use({ launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] } });
@@ -9,11 +9,7 @@ const REALTIME_URL = `${new URL(API_URL).origin}/realtime`;
 
 async function createCaller(prefix: string): Promise<TestUser> {
   const tag = `${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
-  const { accessToken, user } = await apiCall<{ accessToken: string; user: { id: string; email: string; displayName: string } }>("/auth/register", {
-    method: "POST",
-    body: { email: `w10+${tag}@example.com`, password: PASSWORD, displayName: `${prefix} ${tag.slice(-6)}` },
-  });
-  const created = { id: user.id, email: user.email, displayName: user.displayName, token: accessToken };
+  const created = await registerVerified(`w10+${tag}@example.com`, `${prefix} ${tag.slice(-6)}`);
   await onboard(created, "valorant");
   return created;
 }
