@@ -61,6 +61,12 @@ enum ReportStatus {
   DISMISSED
 }
 
+enum FeedbackKind {
+  BUG
+  IDEA
+  OTHER
+}
+
 enum CoachingRequestStatus {
   PENDING
   COUNTERED
@@ -116,6 +122,7 @@ model User {
   messages                 Message[]
   reportsFiled             Report[]                  @relation("Reporter")
   reportsReceived          Report[]                  @relation("ReportedUser")
+  feedback                 Feedback[]
   blocksMade               Block[]                   @relation("Blocker")
   blocksReceived           Block[]                   @relation("Blocked")
   reputationRecords        ReputationRecord[]
@@ -561,6 +568,23 @@ model Report {
 
   reporter     User  @relation("Reporter", fields: [reporterId], references: [id])
   reportedUser User? @relation("ReportedUser", fields: [reportedUserId], references: [id])
+}
+
+/// Feedback about the app itself (bugs, ideas), sent from the side tab. Player reports stay in Report.
+model Feedback {
+  id         String       @id @default(cuid())
+  userId     String
+  kind       FeedbackKind
+  message    String
+  /// Path the user was on when they sent it.
+  page       String?
+  status     ReportStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+  resolvedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
 }
 
 model Block {

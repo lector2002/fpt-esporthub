@@ -462,6 +462,14 @@ const pass = await expectStatus("buy premium", 201, "POST", "/guides/premium", {
 check("premium costs the pass price and lasts 30 days", pass?.balance === walletBeforePass - passBefore?.price?.credits && Math.round((new Date(pass?.premiumUntil) - Date.now()) / 86_400_000) === 30, JSON.stringify(pass));
 check("premium shows as active", (await call("GET", "/guides/premium", { token: buyer.token })).body?.premiumUntil === pass?.premiumUntil);
 
+// Feedback: any player sends app feedback, only admins list and close it.
+await expectStatus("feedback needs a message", 400, "POST", "/feedback", { token: a.token, body: { kind: "BUG", message: "   " } });
+const sentFeedback = (await expectStatus("player sends feedback", 201, "POST", "/feedback", { token: a.token, body: { kind: "BUG", message: "smoke feedback", page: "/dashboard" } }))?.feedback;
+await expectStatus("player cannot list feedback", 403, "GET", "/admin/feedback", { token: a.token });
+const pendingFeedback = (await expectStatus("admin lists feedback", 200, "GET", "/admin/feedback?status=PENDING", { token: admin?.accessToken }))?.items ?? [];
+check("admin sees the new feedback", pendingFeedback.some((item) => item.id === sentFeedback?.id && item.page === "/dashboard"));
+await expectStatus("admin resolves feedback", 200, "PUT", `/admin/feedback/${sentFeedback?.id}`, { token: admin?.accessToken, body: { status: "RESOLVED" } });
+
 // Safety: restricted users can't start contact, banned users are locked out.
 await expectStatus("player cannot use admin api", 403, "GET", "/admin/metrics", { token: a.token });
 await expectStatus("restrict a", 200, "PUT", `/admin/users/${a.id}/status`, { token: admin?.accessToken, body: { status: "RESTRICTED", note: "smoke" } });

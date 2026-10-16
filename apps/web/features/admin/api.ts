@@ -6,6 +6,7 @@ import type {
   AdminFinance,
   AdminMetrics,
   AdminReport,
+  AdminFeedback,
   AdminTeam,
   AdminUser,
   AdminUserDetail,
@@ -129,6 +130,14 @@ export function useAdminReports(params: { status?: ReportStatus; page: number })
   });
 }
 
+export function useAdminFeedback(params: { status?: ReportStatus; page: number }) {
+  return useQuery({
+    queryKey: [...ADMIN_KEY, "feedback", params],
+    queryFn: () => api<Paged<AdminFeedback>>(`/admin/feedback${queryString(params)}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useAdminTeams(params: { q?: string; page: number }) {
   return useQuery({
     queryKey: [...ADMIN_KEY, "teams", params],
@@ -161,6 +170,12 @@ export function useUpdateReport() {
       method: "PUT",
       body: { status: input.status, action: input.action },
     }),
+  );
+}
+
+export function useUpdateFeedback() {
+  return useAdminMutation((input: { feedbackId: string; status: Exclude<ReportStatus, "PENDING"> }) =>
+    api(`/admin/feedback/${encodeURIComponent(input.feedbackId)}`, { method: "PUT", body: { status: input.status } }),
   );
 }
 

@@ -11,9 +11,11 @@ import {
 import { AdminService } from "./admin.service";
 import { AdminFinanceService } from "./admin-finance.service";
 import { AdminReportsService } from "./admin-reports.service";
+import { AdminFeedbackService } from "./admin-feedback.service";
 import { AdminTeamsService } from "./admin-teams.service";
 import { FinanceQueryDto, ListReportsQueryDto, ListTeamsQueryDto, ListUsersQueryDto, toPage } from "./dto/admin-query.dto";
 import { UpdateReportDto } from "./dto/update-report.dto";
+import { UpdateFeedbackDto } from "./dto/update-feedback.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
 import { UpdateRecruitmentDto } from "./dto/update-recruitment.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -29,6 +31,7 @@ export class AdminController {
   constructor(
     private adminService: AdminService,
     private adminReportsService: AdminReportsService,
+    private adminFeedbackService: AdminFeedbackService,
     private adminFinanceService: AdminFinanceService,
     private adminTeamsService: AdminTeamsService,
   ) {}
@@ -75,6 +78,16 @@ export class AdminController {
     @Body() dto: UpdateReportDto,
   ) {
     return this.adminReportsService.updateReport(req.user.id, id, dto.status, dto.action ?? "none");
+  }
+
+  @Get("feedback")
+  getFeedback(@Query() query: ListReportsQueryDto) {
+    return this.adminFeedbackService.getFeedback(query.status, toPage(query.page));
+  }
+
+  @Put("feedback/:id")
+  updateFeedback(@Param("id") id: string, @Body() dto: UpdateFeedbackDto) {
+    return this.adminFeedbackService.updateFeedback(id, dto.status);
   }
 
   @Get("teams")

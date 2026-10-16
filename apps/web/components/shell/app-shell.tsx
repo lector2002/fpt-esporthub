@@ -6,6 +6,7 @@ import { DailyReward } from "@/features/credits/components/daily-reward";
 import { PetWalker } from "@/features/cosmetics/components/pet-walker";
 import { useSession } from "@/lib/session";
 import { AppSidebar } from "./app-sidebar";
+import { FeedbackDrawer } from "./feedback-drawer";
 import { MobileTabBar } from "./mobile-tab-bar";
 import { RewardsDrawer } from "./rewards-drawer";
 import { TopBar } from "./top-bar";
@@ -23,6 +24,7 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
       <PetWalker aboveTabBar={profiles.length > 0} />
       <DailyReward />
       <RewardsDrawer />
+      <FeedbackDrawer />
     </SidebarProvider>
   );
 }

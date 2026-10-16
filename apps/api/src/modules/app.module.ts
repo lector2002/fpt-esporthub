@@ -13,6 +13,7 @@ import { MatchRequestsModule } from "./match-requests/match-requests.module";
 import { ConversationsModule } from "./conversations/conversations.module";
 import { TournamentsModule } from "./tournaments/tournaments.module";
 import { ReportsModule } from "./reports/reports.module";
+import { FeedbackModule } from "./feedback/feedback.module";
 import { BlocksModule } from "./blocks/blocks.module";
 import { ReputationModule } from "./reputation/reputation.module";
 import { AdminModule } from "./admin/admin.module";
@@ -46,6 +47,7 @@ import { CommunitiesModule } from "./communities/communities.module";
     ConversationsModule,
     TournamentsModule,
     ReportsModule,
+    FeedbackModule,
     BlocksModule,
     ReputationModule,
     AdminModule,

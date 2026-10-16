@@ -1,4 +1,4 @@
-import { Activity, Building2, CircleDollarSign, Coins, Flag, GraduationCap, Medal, MessagesSquare, Shield, Trophy, Users } from "lucide-react";
+import { Activity, Building2, CircleDollarSign, Coins, Flag, GraduationCap, Medal, MessageSquareText, MessagesSquare, Shield, Trophy, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { useAdminMessages } from "./messages";
 
@@ -25,6 +25,7 @@ export const ADMIN_NAV: { labelKey: AdminMessageKey; items: AdminNavItem[] }[] =
       { section: "overview", icon: Activity, labelKey: "tabOverview" },
       { section: "users", icon: Users, labelKey: "tabUsers" },
       { section: "reports", icon: Flag, labelKey: "tabReports" },
+      { section: "feedback", icon: MessageSquareText, labelKey: "tabFeedback" },
       { section: "teams", icon: Shield, labelKey: "tabTeams" },
       { section: "communities", icon: MessagesSquare, labelKey: "tabCommunities" },
     ],
@@ -44,7 +45,7 @@ export const adminHref = (section: string | null) => (section ? `/admin/${sectio
 
 export const ADMIN_SECTIONS = ADMIN_NAV.flatMap((group) => group.items);
 
-export type AdminSectionKey = "credits" | "overview" | "users" | "reports" | "teams" | "communities" | "events" | "cups" | "venues" | "coaches";
+export type AdminSectionKey = "credits" | "overview" | "users" | "reports" | "feedback" | "teams" | "communities" | "events" | "cups" | "venues" | "coaches";
 
 export const isAdminSection = (value: string): value is AdminSectionKey => ADMIN_SECTIONS.some((item) => item.section === value);
 

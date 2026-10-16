@@ -103,6 +103,19 @@ export interface AdminReport {
   targetPreview: { label: string; createdAt?: string } | null;
 }
 
+export type FeedbackKind = "BUG" | "IDEA" | "OTHER";
+
+export interface AdminFeedback {
+  id: string;
+  kind: FeedbackKind;
+  message: string;
+  page: string | null;
+  status: ReportStatus;
+  createdAt: string;
+  resolvedAt: string | null;
+  user: { id: string; displayName: string };
+}
+
 export interface AdminTeam {
   id: string;
   name: string;

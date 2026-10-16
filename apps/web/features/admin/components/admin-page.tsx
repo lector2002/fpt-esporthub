@@ -12,6 +12,7 @@ import { CupDetail } from "./cup-detail";
 import { CupsTab } from "./cups-tab";
 import { EventDetail } from "./event-detail";
 import { EventsTab } from "./events-tab";
+import { FeedbackTab } from "./feedback-tab";
 import { FinancePage } from "./finance-page";
 import { OverviewTab } from "./overview-tab";
 import { ReportsTab } from "./reports-tab";
@@ -30,6 +31,7 @@ const SECTIONS = {
   overview: OverviewTab,
   users: UsersTab,
   reports: ReportsTab,
+  feedback: FeedbackTab,
   teams: TeamsTab,
   communities: CommunitiesTab,
   events: EventsTab,
