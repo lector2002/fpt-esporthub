@@ -32,7 +32,7 @@ const STATUS_TONE: Record<TopUpStatus, string> = {
 const percent = (value: number, total: number, language: "vi" | "en") =>
   new Intl.NumberFormat(language === "vi" ? "vi-VN" : "en-US", { style: "percent", maximumFractionDigits: 0 }).format(total ? value / total : 0);
 
-export function KpiCard({ icon: Icon, label, value, hints, tone }: { icon: LucideIcon; label: string; value: string; hints: string[]; tone?: string }) {
+export function KpiCard({ icon: Icon, label, value, hints, tone, children }: { icon: LucideIcon; label: string; value: string; hints: string[]; tone?: string; children?: React.ReactNode }) {
   return (
     <Card size="sm">
       <CardContent className="flex flex-col gap-1">
@@ -46,6 +46,7 @@ export function KpiCard({ icon: Icon, label, value, hints, tone }: { icon: Lucid
             {hint}
           </p>
         ))}
+        {children}
       </CardContent>
     </Card>
   );

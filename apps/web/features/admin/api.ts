@@ -3,10 +3,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import type {
+  AdminActivity,
   AdminFinance,
-  AdminMetrics,
   AdminReport,
-  AdminFeedback,
+  AdminFeedbackPage,
+  FeedbackKind,
   AdminTeam,
   AdminUser,
   AdminUserDetail,
@@ -33,10 +34,12 @@ function queryString(params: Record<string, string | number | undefined>) {
   return text ? `?${text}` : "";
 }
 
-export function useAdminMetrics() {
+export function useAdminActivity(days: FinancePeriod) {
   return useQuery({
-    queryKey: [...ADMIN_KEY, "metrics"],
-    queryFn: () => api<AdminMetrics>("/admin/metrics"),
+    queryKey: [...ADMIN_KEY, "activity", days],
+    queryFn: () => api<AdminActivity>(`/admin/activity?days=${days}`),
+    placeholderData: keepPreviousData,
+    refetchInterval: 60_000,
   });
 }
 
@@ -130,10 +133,10 @@ export function useAdminReports(params: { status?: ReportStatus; page: number })
   });
 }
 
-export function useAdminFeedback(params: { status?: ReportStatus; page: number }) {
+export function useAdminFeedback(params: { status?: ReportStatus; kind?: FeedbackKind; q?: string; path?: string; page: number }) {
   return useQuery({
     queryKey: [...ADMIN_KEY, "feedback", params],
-    queryFn: () => api<Paged<AdminFeedback>>(`/admin/feedback${queryString(params)}`),
+    queryFn: () => api<AdminFeedbackPage>(`/admin/feedback${queryString(params)}`),
     placeholderData: keepPreviousData,
   });
 }
@@ -174,8 +177,8 @@ export function useUpdateReport() {
 }
 
 export function useUpdateFeedback() {
-  return useAdminMutation((input: { feedbackId: string; status: Exclude<ReportStatus, "PENDING"> }) =>
-    api(`/admin/feedback/${encodeURIComponent(input.feedbackId)}`, { method: "PUT", body: { status: input.status } }),
+  return useAdminMutation((input: { feedbackId: string; status?: Exclude<ReportStatus, "PENDING">; note?: string }) =>
+    api(`/admin/feedback/${encodeURIComponent(input.feedbackId)}`, { method: "PUT", body: { status: input.status, note: input.note } }),
   );
 }
 

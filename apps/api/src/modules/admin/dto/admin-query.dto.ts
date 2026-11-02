@@ -1,6 +1,7 @@
 import { Type } from "class-transformer";
 import { IsIn, IsNumberString, IsOptional, IsString, MaxLength } from "class-validator";
 import { FINANCE_PERIODS, type FinancePeriod } from "../admin-finance.service";
+import { FEEDBACK_KINDS, type FeedbackKindValue } from "../../feedback/dto/create-feedback.dto";
 
 export const USER_STATUSES = ["ACTIVE", "WARNED", "RESTRICTED", "BANNED"] as const;
 export const REPORT_STATUSES = ["PENDING", "REVIEWING", "RESOLVED", "DISMISSED"] as const;
@@ -38,6 +39,23 @@ export class ListReportsQueryDto extends PageQueryDto {
   status?: ReportStatusValue;
 }
 
+export class ListFeedbackQueryDto extends ListReportsQueryDto {
+  @IsOptional()
+  @IsIn(FEEDBACK_KINDS)
+  kind?: FeedbackKindValue;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
+  /** The page the feedback was sent from (exact path). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  path?: string;
+}
+
 export class ListTeamsQueryDto extends PageQueryDto {
   @IsOptional()
   @IsString()
@@ -46,6 +64,7 @@ export class ListTeamsQueryDto extends PageQueryDto {
 }
 
 export { ListTeamsQueryDto as ListCommunitiesQueryDto };
+export { FinanceQueryDto as ActivityQueryDto };
 
 export const PAGE_SIZE = 20;
 

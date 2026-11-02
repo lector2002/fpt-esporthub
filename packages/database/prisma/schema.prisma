@@ -579,6 +579,8 @@ model Feedback {
   /// Path the user was on when they sent it.
   page       String?
   status     ReportStatus @default(PENDING)
+  /// Admin-only triage note, never shown to the sender.
+  adminNote  String?
   createdAt  DateTime     @default(now())
   resolvedAt DateTime?
 

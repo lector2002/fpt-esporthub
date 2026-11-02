@@ -2,24 +2,12 @@ import { Injectable } from "@nestjs/common";
 import type { CreditTxKind } from "@fpt-esporthub/database";
 import { PrismaService } from "../prisma/prisma.service";
 import { CREDIT_VND } from "../credits/credit-pricing";
+import { sqlDayKey, vnDayStart, vnDays } from "../../common/vn-day";
 
 export const FINANCE_PERIODS = [7, 30, 90] as const;
 export type FinancePeriod = (typeof FINANCE_PERIODS)[number];
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-/** Days are counted in Vietnam time (UTC+7, no DST), so "today" matches what the admin sees. */
-const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 const SPEND_KINDS = ["BOOST", "FEATURE", "COSMETIC", "GUIDE"] as const satisfies readonly CreditTxKind[];
-
-function vnDayKey(date: Date) {
-  return new Date(date.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10);
-}
-
-/** Start of the Vietnam day `daysAgo` days before today, as a UTC instant. */
-function vnDayStart(daysAgo: number) {
-  const today = vnDayKey(new Date());
-  return new Date(Date.parse(`${today}T00:00:00Z`) - VN_OFFSET_MS - daysAgo * DAY_MS);
-}
 
 const sum = (value: number | null | undefined) => value ?? 0;
 const USER_HISTORY_LIMIT = 50;
@@ -113,10 +101,9 @@ export class AdminFinanceService {
       COACHING: -(kindSum("COACHING_HOLD") + kindSum("COACHING_REFUND")),
     } as Record<(typeof SPEND_KINDS)[number] | "COACHING", number>;
 
-    const revenueByDay = new Map(dailyRevenue.map((row) => [row.day.toISOString().slice(0, 10), row]));
-    const spendByDay = new Map(dailySpend.map((row) => [row.day.toISOString().slice(0, 10), Number(row.credits)]));
-    const daily = Array.from({ length: days }, (_, index) => {
-      const day = vnDayKey(new Date(since.getTime() + index * DAY_MS));
+    const revenueByDay = new Map(dailyRevenue.map((row) => [sqlDayKey(row.day), row]));
+    const spendByDay = new Map(dailySpend.map((row) => [sqlDayKey(row.day), Number(row.credits)]));
+    const daily = vnDays(since, days).map((day) => {
       const row = revenueByDay.get(day);
       return { day, vnd: Number(row?.vnd ?? 0), orders: Number(row?.orders ?? 0), creditsUsed: spendByDay.get(day) ?? 0 };
     });

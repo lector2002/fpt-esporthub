@@ -6,8 +6,6 @@ import { ReputationService } from "../reputation/reputation.service";
 import { findModeratableUser } from "./admin-moderation";
 import { PAGE_SIZE, type UserStatusValue } from "./dto/admin-query.dto";
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
 const USER_SELECT = {
   id: true,
   email: true,
@@ -34,31 +32,6 @@ export class AdminService {
     private prisma: PrismaService,
     private reputationService: ReputationService,
   ) {}
-
-  async getMetrics() {
-    const weekAgo = new Date(Date.now() - WEEK_MS);
-    const [usersTotal, usersNew7d, profileGroups, teams, openReports, pendingRequests, messages7d] =
-      await Promise.all([
-        this.prisma.user.count(),
-        this.prisma.user.count({ where: { createdAt: { gte: weekAgo } } }),
-        this.prisma.playerProfile.groupBy({
-          by: ["game"],
-          where: { onboardingComplete: true },
-          _count: { _all: true },
-        }),
-        this.prisma.team.count(),
-        this.prisma.report.count({ where: { status: { in: ["PENDING", "REVIEWING"] } } }),
-        this.prisma.matchRequest.count({ where: { status: "PENDING" } }),
-        this.prisma.message.count({ where: { createdAt: { gte: weekAgo } } }),
-      ]);
-
-    const profilesByGame = { valorant: 0, league_of_legends: 0 };
-    for (const group of profileGroups) {
-      profilesByGame[toGameSlug(group.game)] = group._count._all;
-    }
-
-    return { usersTotal, usersNew7d, profilesByGame, teams, openReports, pendingRequests, messages7d };
-  }
 
   async getUsers(q: string | undefined, status: UserStatusValue | undefined, page: number) {
     const search = q?.trim();

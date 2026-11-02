@@ -9,11 +9,12 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { AdminService } from "./admin.service";
+import { AdminActivityService } from "./admin-activity.service";
 import { AdminFinanceService } from "./admin-finance.service";
 import { AdminReportsService } from "./admin-reports.service";
 import { AdminFeedbackService } from "./admin-feedback.service";
 import { AdminTeamsService } from "./admin-teams.service";
-import { FinanceQueryDto, ListReportsQueryDto, ListTeamsQueryDto, ListUsersQueryDto, toPage } from "./dto/admin-query.dto";
+import { ActivityQueryDto, FinanceQueryDto, ListFeedbackQueryDto, ListReportsQueryDto, ListTeamsQueryDto, ListUsersQueryDto, toPage } from "./dto/admin-query.dto";
 import { UpdateReportDto } from "./dto/update-report.dto";
 import { UpdateFeedbackDto } from "./dto/update-feedback.dto";
 import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
@@ -30,15 +31,16 @@ type AuthedRequest = { user: { id: string } };
 export class AdminController {
   constructor(
     private adminService: AdminService,
+    private adminActivityService: AdminActivityService,
     private adminReportsService: AdminReportsService,
     private adminFeedbackService: AdminFeedbackService,
     private adminFinanceService: AdminFinanceService,
     private adminTeamsService: AdminTeamsService,
   ) {}
 
-  @Get("metrics")
-  getMetrics() {
-    return this.adminService.getMetrics();
+  @Get("activity")
+  getActivity(@Query() query: ActivityQueryDto) {
+    return this.adminActivityService.getActivity(query.days ?? 30);
   }
 
   @Get("finance")
@@ -81,13 +83,13 @@ export class AdminController {
   }
 
   @Get("feedback")
-  getFeedback(@Query() query: ListReportsQueryDto) {
-    return this.adminFeedbackService.getFeedback(query.status, toPage(query.page));
+  getFeedback(@Query() query: ListFeedbackQueryDto) {
+    return this.adminFeedbackService.getFeedback(query, toPage(query.page));
   }
 
   @Put("feedback/:id")
   updateFeedback(@Param("id") id: string, @Body() dto: UpdateFeedbackDto) {
-    return this.adminFeedbackService.updateFeedback(id, dto.status);
+    return this.adminFeedbackService.updateFeedback(id, dto);
   }
 
   @Get("teams")

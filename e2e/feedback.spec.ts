@@ -29,11 +29,21 @@ test("a player sends a bug report from the side tab and an admin resolves it in 
   const adminPage = await adminContext.newPage();
   await signIn(adminPage, admin);
   await adminPage.goto("/admin/feedback");
+  await adminPage.getByRole("radio", { name: /^Bug/ }).click();
+  await adminPage.getByLabel("Search message, page or sender").fill(message);
+  await adminPage.keyboard.press("Enter");
+  await expect(adminPage.getByRole("row")).toHaveCount(2);
   const row = adminPage.getByRole("row").filter({ hasText: message });
   await expect(row).toContainText(player.displayName);
   await row.getByRole("button", { name: "Bug" }).click();
-  await expect(adminPage.getByRole("dialog")).toContainText("/dashboard");
-  await adminPage.getByRole("dialog").getByRole("button", { name: "Resolve" }).click();
+  const dialog = adminPage.getByRole("dialog");
+  await expect(dialog).toContainText("/dashboard");
+  await dialog.getByLabel("Internal note").fill("Repro on Android Chrome");
+  await dialog.getByRole("button", { name: "Save note" }).click();
+  await expect(adminPage.getByText("Note saved")).toBeVisible();
+  // Disabled again only once the refetched item carries the saved note.
+  await expect(dialog.getByRole("button", { name: "Save note" })).toBeDisabled();
+  await dialog.getByRole("button", { name: "Resolve" }).click();
   await expect(row).toBeHidden();
   await adminContext.close();
 });

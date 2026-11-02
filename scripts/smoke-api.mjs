@@ -470,8 +470,41 @@ const pendingFeedback = (await expectStatus("admin lists feedback", 200, "GET", 
 check("admin sees the new feedback", pendingFeedback.some((item) => item.id === sentFeedback?.id && item.page === "/dashboard"));
 await expectStatus("admin resolves feedback", 200, "PUT", `/admin/feedback/${sentFeedback?.id}`, { token: admin?.accessToken, body: { status: "RESOLVED" } });
 
+// Feedback center: kind, page and text filters, counts for the filter labels, a 30-day trend, admin notes.
+const ideaText = `smoke idea ${Date.now()}`;
+const idea = (await expectStatus("player sends an idea", 201, "POST", "/feedback", { token: b.token, body: { kind: "IDEA", message: ideaText, page: "/teams" } }))?.feedback;
+const ideas = await expectStatus("admin filters feedback by kind and text", 200, "GET", `/admin/feedback?kind=IDEA&q=${encodeURIComponent(ideaText)}`, { token: admin?.accessToken });
+check("kind and text filters find only the idea", ideas?.items?.length === 1 && ideas.items[0].id === idea?.id, JSON.stringify(ideas?.items)?.slice(0, 200));
+check("feedback counts follow the other filters", ideas?.counts?.status?.PENDING === 1 && ideas?.counts?.kind?.IDEA === 1 && ideas?.counts?.kind?.BUG === 0, JSON.stringify(ideas?.counts));
+check("feedback trend has 30 days with today's idea", ideas?.trend?.length === 30 && ideas.trend.at(-1)?.created >= 1, JSON.stringify(ideas?.trend?.at(-1)));
+check("open feedback pages are listed", ideas?.topPages?.some((row) => row.page === "/teams"), JSON.stringify(ideas?.topPages));
+const onPage = await expectStatus("admin filters feedback by page", 200, "GET", `/admin/feedback?path=${encodeURIComponent("/teams")}&q=${encodeURIComponent(ideaText)}`, { token: admin?.accessToken });
+check("page filter keeps the idea", onPage?.items?.length === 1, JSON.stringify(onPage?.items)?.slice(0, 200));
+await expectStatus("feedback rejects an unknown kind", 400, "GET", "/admin/feedback?kind=PRAISE", { token: admin?.accessToken });
+await expectStatus("feedback update needs a status or a note", 400, "PUT", `/admin/feedback/${idea?.id}`, { token: admin?.accessToken, body: {} });
+const noted = (await expectStatus("admin saves a feedback note", 200, "PUT", `/admin/feedback/${idea?.id}`, { token: admin?.accessToken, body: { note: "Planned for next sprint" } }))?.feedback;
+check("note saved, status unchanged", noted?.adminNote === "Planned for next sprint" && noted?.status === "PENDING", JSON.stringify(noted));
+await expectStatus("admin dismisses the idea", 200, "PUT", `/admin/feedback/${idea?.id}`, { token: admin?.accessToken, body: { status: "DISMISSED" } });
+
+// Activity dashboard: signups, chat, connections and teams per Vietnam day, compared with the period before.
+await expectStatus("player cannot use admin api", 403, "GET", "/admin/activity", { token: a.token });
+await expectStatus("activity rejects other periods", 400, "GET", "/admin/activity?days=14", { token: admin?.accessToken });
+const activity = await expectStatus("admin reads activity", 200, "GET", "/admin/activity?days=7", { token: admin?.accessToken });
+const activityToday = activity?.daily?.at(-1);
+check("activity has one row per day", activity?.daily?.length === 7, JSON.stringify(activity?.daily?.length));
+check(
+  "today counts the smoke players, their chat and their connection",
+  activityToday?.signups >= 2 && activityToday?.messages >= 1 && activityToday?.connections >= 1 && activityToday?.active >= 1,
+  JSON.stringify(activityToday),
+);
+check(
+  "period totals include today",
+  activity?.users?.new >= activityToday?.signups && activity?.messages?.total >= activityToday?.messages && activity?.connections?.made >= activityToday?.connections,
+  JSON.stringify({ users: activity?.users, messages: activity?.messages, connections: activity?.connections }),
+);
+check("open feedback is counted for the dashboard", typeof activity?.attention?.feedbackPending === "number" && typeof activity?.attention?.reportsOpen === "number", JSON.stringify(activity?.attention));
+
 // Safety: restricted users can't start contact, banned users are locked out.
-await expectStatus("player cannot use admin api", 403, "GET", "/admin/metrics", { token: a.token });
 await expectStatus("restrict a", 200, "PUT", `/admin/users/${a.id}/status`, { token: admin?.accessToken, body: { status: "RESTRICTED", note: "smoke" } });
 await expectStatus("restricted cannot send request", 403, "POST", "/match/requests", {
   token: a.token,

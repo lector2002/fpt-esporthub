@@ -5,14 +5,14 @@ import { Coins, GraduationCap, Receipt, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { QueryState } from "@/components/common/query-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatVnd } from "@/features/offline-tournaments/format";
 import { useAdminFinance } from "../api";
 import { useFinanceMessages } from "../finance-messages";
 import { formatNumber } from "../format";
 import { useAdminMessages } from "../messages";
-import { FINANCE_PERIODS, type AdminFinance, type FinancePeriod } from "../types";
+import type { AdminFinance, FinancePeriod } from "../types";
 import { CreditsUsedCard, KpiCard, OrdersCard, RecentTopUpsCard, RevenueChart, TopBuyersCard } from "./finance-cards";
+import { PeriodToggle } from "./period-toggle";
 
 const KPI_GRID = "grid gap-3 sm:grid-cols-2 xl:grid-cols-4";
 
@@ -27,22 +27,7 @@ export function FinancePage() {
       <PageHeader
         title={admin.t("tabFinance")}
         description={t("description")}
-        actions={
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            size="sm"
-            value={String(days)}
-            onValueChange={(value) => value && setDays(Number(value) as FinancePeriod)}
-            aria-label={t("period")}
-          >
-            {FINANCE_PERIODS.map((period) => (
-              <ToggleGroupItem key={period} value={String(period)} className="data-[state=on]:text-primary">
-                {t("periodDays", { days: period })}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        }
+        actions={<PeriodToggle value={days} onChange={setDays} />}
       />
       <QueryState
         query={finance}

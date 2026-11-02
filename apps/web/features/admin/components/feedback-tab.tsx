@@ -1,56 +1,75 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Eye, MessageSquareText, XCircle } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle2, Eye, MessageSquareText, Save, StickyNote, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { QueryState } from "@/components/common/query-state";
+import { EmptyState, QueryState } from "@/components/common/query-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { useAdminFeedback, useUpdateFeedback } from "../api";
 import { REPORT_STATUS_TONE, STACK_ON_PHONE, formatDate } from "../format";
 import { useAdminMessages } from "../messages";
-import { REPORT_STATUSES, type AdminFeedback, type ReportStatus } from "../types";
+import { FEEDBACK_KINDS, REPORT_STATUSES, type AdminFeedback, type AdminFeedbackPage, type FeedbackKind, type ReportStatus } from "../types";
+import { FeedbackStats } from "./feedback-stats";
 import { Pagination } from "./pagination";
+import { SearchBar } from "./search-bar";
+
+type KindFilter = FeedbackKind | "ALL";
+
+const toStatus = (value: string | null): ReportStatus => REPORT_STATUSES.find((status) => status === value) ?? "PENDING";
 
 export function FeedbackTab() {
-  const { t } = useAdminMessages();
-  const [status, setStatus] = useState<ReportStatus>("PENDING");
+  const searchParams = useSearchParams();
+  const [status, setStatus] = useState<ReportStatus>(() => toStatus(searchParams.get("status")));
+  const [kind, setKind] = useState<KindFilter>("ALL");
+  const [q, setQ] = useState("");
+  const [path, setPath] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const feedback = useAdminFeedback({ status, page });
+  const feedback = useAdminFeedback({ status, kind: kind === "ALL" ? undefined : kind, q, path: path ?? undefined, page });
   const selected = feedback.data?.items.find((item) => item.id === selectedId) ?? null;
+  const { t } = useAdminMessages();
+
+  /** Any filter change starts again at page 1. */
+  const refilter =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      set(value);
+      setPage(1);
+    };
 
   return (
     <div className="flex flex-col gap-4">
-      <ToggleGroup
-        type="single"
-        variant="outline"
-        value={status}
-        onValueChange={(value) => {
-          if (!value) return;
-          setStatus(value as ReportStatus);
-          setPage(1);
-        }}
-        className="flex-wrap"
-        aria-label={t("colStatus")}
+      <QueryState
+        query={feedback}
+        skeleton={
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-64" />
+          </div>
+        }
       >
-        {REPORT_STATUSES.map((value) => (
-          <ToggleGroupItem key={value} value={value}>
-            {t(`reportStatus_${value}`)}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-
-      <QueryState query={feedback} isEmpty={(data) => data.items.length === 0} empty={{ icon: MessageSquareText, title: t("noFeedback") }}>
         {(data) => (
           <>
-            <FeedbackTable items={data.items} onOpen={setSelectedId} />
-            <Pagination page={data.page} total={data.total} pageSize={data.pageSize} onPageChange={setPage} />
+            <FeedbackStats data={data} path={path} onPath={refilter(setPath)} />
+            <FeedbackFilters data={data} status={status} kind={kind} path={path} onStatus={refilter(setStatus)} onKind={refilter(setKind)} onSearch={refilter(setQ)} onPath={refilter(setPath)} />
+            {data.items.length === 0 ? (
+              <EmptyState icon={MessageSquareText} title={t("noFeedback")} />
+            ) : (
+              <>
+                <FeedbackTable items={data.items} onOpen={setSelectedId} />
+                <Pagination page={data.page} total={data.total} pageSize={data.pageSize} onPageChange={setPage} />
+              </>
+            )}
           </>
         )}
       </QueryState>
@@ -62,6 +81,57 @@ export function FeedbackTab() {
       </Sheet>
     </div>
   );
+}
+
+function FeedbackFilters(props: {
+  data: AdminFeedbackPage;
+  status: ReportStatus;
+  kind: KindFilter;
+  path: string | null;
+  onStatus: (status: ReportStatus) => void;
+  onKind: (kind: KindFilter) => void;
+  onSearch: (q: string) => void;
+  onPath: (path: string | null) => void;
+}) {
+  const { t } = useAdminMessages();
+  const { counts } = props.data;
+  const allKinds = FEEDBACK_KINDS.reduce((sum, kind) => sum + counts.kind[kind], 0);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <ToggleGroup type="single" variant="outline" value={props.status} onValueChange={(value) => value && props.onStatus(value as ReportStatus)} className="flex-wrap" aria-label={t("colStatus")}>
+        {REPORT_STATUSES.map((value) => (
+          <ToggleGroupItem key={value} value={value}>
+            {t(`reportStatus_${value}`)} <Count value={counts.status[value]} />
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      <div className="flex flex-wrap items-center gap-2">
+        <ToggleGroup type="single" variant="outline" size="sm" value={props.kind} onValueChange={(value) => value && props.onKind(value as KindFilter)} aria-label={t("colKind")}>
+          <ToggleGroupItem value="ALL">
+            {t("allKinds")} <Count value={allKinds} />
+          </ToggleGroupItem>
+          {FEEDBACK_KINDS.map((value) => (
+            <ToggleGroupItem key={value} value={value}>
+              {t(`feedbackKind_${value}`)} <Count value={counts.kind[value]} />
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        <div className="flex min-w-60 flex-1">
+          <SearchBar placeholder={t("feedbackSearch")} onSearch={props.onSearch} />
+        </div>
+        {props.path && (
+          <Button variant="outline" size="sm" onClick={() => props.onPath(null)} aria-label={t("clearPage")}>
+            {t("filterPage", { page: props.path })} <X />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Count({ value }: { value: number }) {
+  return <span className="text-muted-foreground tabular-nums">{value}</span>;
 }
 
 function FeedbackTable({ items, onOpen }: { items: AdminFeedback[]; onOpen: (id: string) => void }) {
@@ -92,7 +162,13 @@ function FeedbackTable({ items, onOpen }: { items: AdminFeedback[]; onOpen: (id:
                 {t(`feedbackKind_${item.kind}`)}
               </button>
             </TableCell>
-            <TableCell className="max-w-72 truncate">{item.message}</TableCell>
+            <TableCell className="max-w-72">
+              <span className="flex items-center gap-1.5">
+                <span className="truncate">{item.message}</span>
+                {item.adminNote && <StickyNote className="size-3.5 shrink-0 text-muted-foreground" role="img" aria-label={t("hasNote")} />}
+              </span>
+              {item.page && <code className="block truncate text-xs text-muted-foreground">{item.page}</code>}
+            </TableCell>
             <TableCell>{item.user.displayName}</TableCell>
             <TableCell>
               <Badge variant="outline" className={cn(REPORT_STATUS_TONE[item.status])}>
@@ -119,22 +195,26 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 function FeedbackDetails({ item, onDone }: { item: AdminFeedback; onDone: () => void }) {
   const { t, language } = useAdminMessages();
   const update = useUpdateFeedback();
-  const [submitting, setSubmitting] = useState<ReportStatus | null>(null);
+  const [submitting, setSubmitting] = useState<ReportStatus | "note" | null>(null);
+  const [note, setNote] = useState(item.adminNote ?? "");
+  const noteChanged = note.trim() !== (item.adminNote ?? "");
 
-  const submit = (status: Exclude<ReportStatus, "PENDING">) => {
-    setSubmitting(status);
+  /** A status change also saves an edited note, so closing an item never drops it. */
+  const submit = (status?: Exclude<ReportStatus, "PENDING">) => {
+    setSubmitting(status ?? "note");
     update.mutate(
-      { feedbackId: item.id, status },
+      { feedbackId: item.id, status, note: noteChanged ? note.trim() : undefined },
       {
         onSuccess: () => {
-          toast.success(t("feedbackUpdated"));
-          onDone();
+          toast.success(status ? t("feedbackUpdated") : t("noteSaved"));
+          if (status) onDone();
         },
         onError: (error) => toast.error(t("updateFailed"), { description: error.message }),
         onSettled: () => setSubmitting(null),
       },
     );
   };
+  const icon = (target: ReportStatus | "note", Icon: React.ComponentType) => (submitting === target ? <Spinner /> : <Icon />);
 
   return (
     <>
@@ -159,20 +239,27 @@ function FeedbackDetails({ item, onDone }: { item: AdminFeedback; onDone: () => 
             <code className="break-all">{item.page}</code>
           </DetailRow>
         )}
+        <Field>
+          <FieldLabel htmlFor={`feedback-note-${item.id}`}>{t("adminNote")}</FieldLabel>
+          <Textarea id={`feedback-note-${item.id}`} value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} rows={3} />
+          <Button variant="outline" size="sm" className="self-start" onClick={() => submit()} disabled={!noteChanged || update.isPending}>
+            {icon("note", Save)} {t("saveNote")}
+          </Button>
+        </Field>
       </div>
 
       <SheetFooter>
         <Button onClick={() => submit("RESOLVED")} disabled={update.isPending}>
-          {submitting === "RESOLVED" ? <Spinner /> : <CheckCircle2 />} {t("resolve")}
+          {icon("RESOLVED", CheckCircle2)} {t("resolve")}
         </Button>
         {item.status !== "REVIEWING" && (
           <Button variant="outline" onClick={() => submit("REVIEWING")} disabled={update.isPending}>
-            {submitting === "REVIEWING" ? <Spinner /> : <Eye />} {t("markReviewing")}
+            {icon("REVIEWING", Eye)} {t("markReviewing")}
           </Button>
         )}
         {item.status !== "DISMISSED" && (
           <Button variant="ghost" onClick={() => submit("DISMISSED")} disabled={update.isPending}>
-            {submitting === "DISMISSED" ? <Spinner /> : <XCircle />} {t("dismiss")}
+            {icon("DISMISSED", XCircle)} {t("dismiss")}
           </Button>
         )}
       </SheetFooter>

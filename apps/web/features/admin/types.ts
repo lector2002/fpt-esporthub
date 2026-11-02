@@ -57,14 +57,36 @@ export interface Paged<T> {
   pageSize: number;
 }
 
-export interface AdminMetrics {
-  usersTotal: number;
-  usersNew7d: number;
-  profilesByGame: Record<GameSlug, number>;
+export type MessagePlace = "direct" | "team" | "community";
+
+interface ActivityUser {
+  id: string;
+  displayName: string;
+  avatarKey: string | null;
+}
+
+export interface ActivityDay {
+  day: string;
+  active: number;
+  signups: number;
+  messages: number;
+  connections: number;
   teams: number;
-  openReports: number;
-  pendingRequests: number;
-  messages7d: number;
+}
+
+export interface AdminActivity {
+  days: FinancePeriod;
+  since: string;
+  users: { new: number; previous: number; onboarded: number; total: number };
+  active: { users: number; previous: number };
+  messages: { total: number; previous: number; byPlace: Record<MessagePlace, number> };
+  connections: { made: number; previous: number; requestsSent: number; players: number; teams: number };
+  teams: { created: number; previous: number; byGame: Partial<Record<GameSlug, number>> };
+  attention: { reportsOpen: number; feedbackPending: number; feedbackReviewing: number };
+  daily: ActivityDay[];
+  topChatters: { user: ActivityUser; messages: number }[];
+  topConnectors: { user: ActivityUser; connections: number }[];
+  newTeams: { id: string; name: string; game: GameSlug; logoKey: string | null; createdAt: string; captain: ActivityUser; members: number }[];
 }
 
 export interface AdminUser {
@@ -104,6 +126,7 @@ export interface AdminReport {
 }
 
 export type FeedbackKind = "BUG" | "IDEA" | "OTHER";
+export const FEEDBACK_KINDS: FeedbackKind[] = ["BUG", "IDEA", "OTHER"];
 
 export interface AdminFeedback {
   id: string;
@@ -111,9 +134,19 @@ export interface AdminFeedback {
   message: string;
   page: string | null;
   status: ReportStatus;
+  adminNote: string | null;
   createdAt: string;
   resolvedAt: string | null;
   user: { id: string; displayName: string };
+}
+
+export interface AdminFeedbackPage extends Paged<AdminFeedback> {
+  /** Counts under the other filters, for the filter labels. */
+  counts: { status: Record<ReportStatus, number>; kind: Record<FeedbackKind, number> };
+  /** Last 30 Vietnam days, oldest first. */
+  trend: { day: string; created: number; closed: number }[];
+  /** Pages with the most pending or reviewing feedback. */
+  topPages: { page: string; open: number }[];
 }
 
 export interface AdminTeam {

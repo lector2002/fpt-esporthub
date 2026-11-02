@@ -14,7 +14,7 @@ import { EventDetail } from "./event-detail";
 import { EventsTab } from "./events-tab";
 import { FeedbackTab } from "./feedback-tab";
 import { FinancePage } from "./finance-page";
-import { OverviewTab } from "./overview-tab";
+import { ActivityPage } from "./activity-page";
 import { ReportsTab } from "./reports-tab";
 import { TeamDetail } from "./team-detail";
 import { TeamsTab } from "./teams-tab";
@@ -26,9 +26,9 @@ import { CoachDetail } from "./coach-detail";
 import { CoachesTab } from "./coaches-tab";
 import { AdminCreditsTab } from "@/features/credits/components/admin-credits-tab";
 
+/** `overview` is missing: it renders `ActivityPage`, which owns its header (period switch). */
 const SECTIONS = {
   credits: AdminCreditsTab,
-  overview: OverviewTab,
   users: UsersTab,
   reports: ReportsTab,
   feedback: FeedbackTab,
@@ -38,7 +38,7 @@ const SECTIONS = {
   cups: CupsTab,
   venues: VenuesTab,
   coaches: CoachesTab,
-} satisfies Record<AdminSectionKey, () => React.ReactNode>;
+} satisfies Record<Exclude<AdminSectionKey, "overview">, () => React.ReactNode>;
 
 /** Detail pages; keep in step with `hasAdminDetail` in nav.ts. */
 const DETAILS: Partial<Record<AdminSectionKey, (props: { id: string }) => React.ReactNode>> = {
@@ -61,6 +61,7 @@ export function AdminPage({ section, detailId }: { section: AdminSectionKey | nu
     return <EmptyState icon={ShieldX} title={t("noAccess")} description={t("noAccessDescription")} />;
   }
   if (section === null) return <FinancePage />;
+  if (section === "overview") return <ActivityPage />;
   const Detail = detailId ? DETAILS[section] : undefined;
   if (Detail && detailId) return <Detail id={detailId} />;
 

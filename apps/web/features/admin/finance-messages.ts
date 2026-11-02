@@ -3,8 +3,6 @@ import { defineMessages } from "@/lib/i18n";
 export const useFinanceMessages = defineMessages({
   vi: {
     description: "Tiền nạp qua payOS và credits trên toàn nền tảng.",
-    period: "Khoảng thời gian",
-    periodDays: "{days} ngày",
     revenue: "Doanh thu",
     revenueDelta: "{delta} so với {days} ngày trước",
     revenueNoPrevious: "Kỳ trước chưa có doanh thu",
@@ -50,8 +48,6 @@ export const useFinanceMessages = defineMessages({
   },
   en: {
     description: "Money paid in through payOS and credits across the platform.",
-    period: "Period",
-    periodDays: "{days} days",
     revenue: "Revenue",
     revenueDelta: "{delta} vs the previous {days} days",
     revenueNoPrevious: "No revenue in the previous period",
